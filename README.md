@@ -2,6 +2,126 @@
 
 Sistema web de gestao para operacoes de leasing de energia solar. Permite gerenciar parceiros, vendedores, clientes, simulacoes e pedidos com controle de permissoes granular.
 
+## Arquitetura — Como o Front e o Back Funcionam
+
+Este projeto **nao separa frontend e backend em repositorios ou servidores distintos**. Ele usa o modelo **fullstack** do Next.js, onde tudo roda em um unico processo Node.js.
+
+### Visao Geral
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Servidor Node.js                      │
+│                     (Next.js 16)                         │
+│                                                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌───────────────┐  │
+│  │  Paginas SSR  │  │ Server       │  │  API Routes   │  │
+│  │  (React no    │  │ Actions      │  │  /api/v1/*    │  │
+│  │   servidor)   │  │ (src/actions)│  │  (REST)       │  │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬────────┘  │
+│         │                  │                  │           │
+│         └──────────────────┼──────────────────┘           │
+│                            │                              │
+│                    Supabase Client                        │
+│                  (PostgreSQL + Auth)                      │
+└────────────────────────────┼─────────────────────────────┘
+                             │
+                    ┌────────▼────────┐
+                    │  Supabase Cloud  │
+                    │  (PostgreSQL,    │
+                    │   Auth, Storage) │
+                    └─────────────────┘
+```
+
+### Frontend (o que roda no navegador)
+
+- **Nao e um SPA puro nem arquivos estaticos.** As paginas sao renderizadas no servidor (SSR) e enviadas como HTML pronto ao browser.
+- Componentes marcados com `"use client"` sao hidratados no browser e se tornam interativos (formularios, tabelas, sidebar, etc.).
+- O browser **nunca acessa o banco diretamente**. Toda comunicacao com dados passa pelo servidor Node.js.
+- Bibliotecas client-side: React Query (cache/fetch), React Hook Form (formularios), TanStack Table (tabelas), shadcn/ui (componentes visuais).
+
+### Backend (o que roda no servidor Node.js)
+
+O backend **nao e uma API separada**. Ele esta embutido no mesmo processo Next.js de tres formas:
+
+1. **Server Components (SSR)** — Componentes React que rodam no servidor. Podem acessar o banco, verificar permissoes, e retornar HTML pronto. Exemplo: `src/app/dashboard/orders/page.tsx` verifica `hasPermission("orders:view")` antes de renderizar.
+
+2. **Server Actions** (`src/actions/`) — Funcoes marcadas com `"use server"` que o frontend chama diretamente (sem precisar de endpoint REST). O Next.js gera automaticamente uma rota interna para cada action. Exemplo: `getOrdersForCurrentUser()` e chamada pelo React Query no browser, mas executa no servidor.
+
+3. **API Routes** (`src/app/api/v1/`) — Endpoints REST tradicionais para integracao com sistemas externos. Autenticados via `x-api-key`.
+
+### Supabase (banco de dados e autenticacao)
+
+O Supabase funciona como **BaaS (Backend as a Service)** hospedado na nuvem:
+
+- **PostgreSQL** — Banco relacional com 29 tabelas. Acessado via cliente Supabase (nao ha ORM).
+- **Auth** — Autenticacao de usuarios (login/logout, sessoes via cookies). O middleware (`src/middleware.ts`) renova a sessao a cada request.
+- **Storage** — Armazenamento de arquivos (documentos de pedidos/simulacoes).
+- **RPC** — Funcoes PostgreSQL chamadas via `supabase.rpc()` (ex: `get_user_permissions_detailed`).
+
+Existem 3 clientes Supabase no projeto:
+
+| Cliente | Arquivo | Onde roda | Permissao |
+|---------|---------|-----------|-----------|
+| `createClient()` | `lib/supabase/server.ts` | Servidor (SSR/Actions) | Anon key + cookies do usuario |
+| `createClient()` | `lib/supabase/client.ts` | Browser | Anon key publica |
+| `createAdminClient()` | `lib/supabase/admin.ts` | Servidor (Actions) | Service Role key (acesso total, bypassa RLS) |
+
+### Fluxo de uma requisicao tipica
+
+```
+1. Usuario clica em "Pessoa Juridica" na sidebar
+2. Browser navega para /meo/dashboard/orders?type=pj
+3. Next.js middleware renova a sessao (cookies Supabase)
+4. Server Component (orders/page.tsx) verifica permissao no servidor
+5. Renderiza HTML com o componente <OrdersTable filterType="pj" />
+6. Browser hidrata o componente (React Query chama getOrdersForCurrentUser)
+7. Server Action executa no servidor, consulta Supabase PostgreSQL
+8. Dados retornam ao browser, React Query faz cache, tabela renderiza
+```
+
+### Infraestrutura — Tudo no mesmo servidor
+
+Em producao, o sistema roda assim:
+
+```
+┌──────────────────────────────────────┐
+│     Servidor (VPS / VM unica)        │
+│                                       │
+│  ┌────────────────────────────────┐  │
+│  │  Processo Node.js (porta 3000) │  │
+│  │  next start                    │  │
+│  │  (serve HTML, CSS, JS, APIs,   │  │
+│  │   Server Actions — tudo junto) │  │
+│  └────────────────────────────────┘  │
+│                                       │
+│  ┌────────────────────────────────┐  │
+│  │  Nginx (reverse proxy)         │  │
+│  │  porta 443 → localhost:3000    │  │
+│  │  SSL, compressao, cache static │  │
+│  └────────────────────────────────┘  │
+└──────────────────────────────────────┘
+              │
+     Internet │  HTTPS
+              ▼
+     ┌─────────────────┐
+     │  Supabase Cloud  │  (banco, auth, storage — hospedado fora)
+     └─────────────────┘
+```
+
+- **Um unico servidor** roda tudo: frontend, backend, API REST. Nao ha separacao de servicos.
+- **Um unico processo Node.js** (`next start`) serve as paginas e executa toda a logica de backend.
+- **Nginx** fica na frente como proxy reverso, cuidando de SSL e servindo como ponto de entrada.
+- **Supabase esta na nuvem** — o servidor so precisa de internet para conectar ao banco. Nao ha PostgreSQL local.
+- Para escalar, basta aumentar os recursos do servidor ou colocar multiplas instancias atras de um load balancer.
+
+### O que NAO existe neste projeto
+
+- **Nao ha servidor backend separado** (Express, Fastify, NestJS, etc.)
+- **Nao ha arquivos estaticos exportados** (`next export` / SSG) — tudo e SSR dinamico
+- **Nao ha conexao direta browser→banco** — toda query passa pelo servidor Node.js
+- **Nao ha ORM** (Prisma, Drizzle, etc.) — usa o cliente Supabase JS diretamente
+- **Nao ha Docker ou Kubernetes** — e um processo Node.js simples rodando no servidor
+
 ## Tech Stack
 
 | Camada | Tecnologia |
