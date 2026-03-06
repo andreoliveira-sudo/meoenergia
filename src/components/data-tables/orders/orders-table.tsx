@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { ViewOrderSheet } from "@/components/dialogs/view-order-sheet"
 import {
 	getCoreRowModel,
@@ -25,12 +25,11 @@ const ORDERS_TABLE_STORAGE_KEY = "orders-table-state"
 
 export const OrdersTable = ({ filterId, filterType }: { filterId?: string; filterType?: "pf" | "pj" }) => {
 	const { sorting, setSorting, columnFilters, setColumnFilters, columnVisibility, setColumnVisibility } = usePersistedTableState({
-		storageKey: `${ORDERS_TABLE_STORAGE_KEY}${filterType ? `-${filterType}` : ""}`,
+		storageKey: ORDERS_TABLE_STORAGE_KEY,
 		initialState: {
 			sorting: [{ id: "created_at", desc: true }],
 			columnVisibility: {
-				status: false,
-				customer_type: false
+				status: false
 			},
 			columnFilters: filterId ? [{ id: "id", value: filterId }] : []
 		}
@@ -38,13 +37,15 @@ export const OrdersTable = ({ filterId, filterType }: { filterId?: string; filte
 
 	const { data: rawData, isLoading } = useQuery({
 		queryKey: ["orders"],
-		queryFn: getOrdersForCurrentUser
+		queryFn: getOrdersForCurrentUser,
+		staleTime: 5 * 60 * 1000, // 5 minutos - evita refetch a cada navegação
+		refetchOnMount: false
 	})
 
-	const data = filterType ? rawData?.filter((order) => order.customer_type === filterType) : rawData
+	const data = useMemo(() => (filterType ? (rawData ?? []).filter((order) => order.customer_type === filterType) : (rawData ?? [])), [rawData, filterType])
 
 	const table = useReactTable({
-		data: data ?? [],
+		data,
 		columns,
 		state: {
 			sorting,

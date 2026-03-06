@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react"
-import { Activity, Bell, Briefcase, Building, Code, FileText, Handshake, Home, Package, Settings, User, Users } from "lucide-react"
+import { Activity, Bell, Briefcase, Building, Calculator, Code, FileText, Handshake, Home, LayoutList, Package, Settings, User, Users } from "lucide-react"
 
 interface SubNavItem {
 	title: string
@@ -15,12 +15,13 @@ interface NavItem {
 	permission?: string // Permissão necessária para ver este item
 	allowedTypes?: ("pf" | "pj" | "admin" | "seller")[]
 	subItems?: SubNavItem[]
+	newTab?: boolean
 }
 
 interface NavSection {
 	id: number
 	title: string
-	permission?: string // Permissão necessária para ver a seção inteira
+	permission?: string
 	items: NavItem[]
 }
 
@@ -34,27 +35,28 @@ const navItems: NavSection[] = [
 				title: "Vendedores",
 				url: "/dashboard/sellers",
 				icon: Briefcase,
-				permission: "sellers:view", // Permissão base para ver o menu
+				permission: "admin:settings:manage", // Permissão base para ver o menu
 				allowedTypes: ["pj", "admin", "seller"]
 			},
 			{
 				title: "Parceiros",
 				url: "/dashboard/partners",
 				icon: Handshake,
-				permission: "partners:view",
+				permission: "admin:settings:manage",
 				allowedTypes: ["pj", "admin", "seller"]
 			},
 			{
 				title: "Clientes",
 				url: "/dashboard/customers",
 				icon: Building,
-				permission: "simulations:view" // Reutilizando uma permissão por enquanto
+				permission: "simulations:view"
 			},
 			{
 				title: "Simulador Livre",
 				url: "/simulacao",
-				icon: Activity,
-				permission: "simulations:view"
+				icon: Calculator,
+				permission: "simulations:view",
+				newTab: true,
 			},
 			{
 				title: "Notificações",
@@ -70,7 +72,7 @@ const navItems: NavSection[] = [
 			{
 				title: "Pessoa Física",
 				url: "/dashboard/orders?type=pf",
-				icon: FileText,
+				icon: User,
 				permission: "orders:view"
 			},
 			{

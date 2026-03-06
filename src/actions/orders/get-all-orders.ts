@@ -41,9 +41,9 @@ async function getAllOrders(): Promise<OrderWithRelations[]> {
 					name,
 					cnpj,
 					company_name,
-					type,
 					city,
 					state,
+					type,
 					partners ( contact_name, legal_business_name )
 				),
 				sellers (
@@ -100,7 +100,7 @@ async function getAllOrders(): Promise<OrderWithRelations[]> {
 				cnpj: customer.cnpj || "N/A",
 				company_name: customer.company_name || "N/A",
 				customer_name: resolvedCustomerName,
-				customer_type: (customer.type as "pf" | "pj") || "pj",
+				customer_type: (customer as any).type || "pj",
 				city: customer.city || "N/A",
 				state: customer.state || "N/A",
 				partner_name: partner?.legal_business_name || "N/A",

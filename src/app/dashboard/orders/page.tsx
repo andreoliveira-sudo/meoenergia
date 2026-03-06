@@ -12,18 +12,13 @@ const OrdersPage = async ({ searchParams }: { searchParams: Promise<{ id?: strin
 	}
 
 	const { id, type } = (await searchParams) || {}
-	const filterType = type === "pf" || type === "pj" ? type : undefined
-	const title = filterType === "pf" ? "Pedidos — Pessoa Física" : filterType === "pj" ? "Pedidos — Pessoa Jurídica" : "Pedidos"
-	const description = filterType
-		? `Visualize e gerencie os pedidos de ${filterType === "pf" ? "Pessoa Física" : "Pessoa Jurídica"}.`
-		: "Visualize e gerencie todos os pedidos criados no sistema."
 
 	return (
 		<div className="flex flex-col gap-8">
 			<div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 				<div>
-					<h1 className="text-3xl font-bold tracking-tight">{title}</h1>
-					<p className="text-muted-foreground">{description}</p>
+					<h1 className="text-3xl font-bold tracking-tight">Pedidos</h1>
+					<p className="text-muted-foreground">Visualize e gerencie todos os pedidos criados no sistema.</p>
 				</div>
 			</div>
 			<Card>
@@ -32,7 +27,7 @@ const OrdersPage = async ({ searchParams }: { searchParams: Promise<{ id?: strin
 					<CardDescription>Lista de todos os pedidos gerados a partir de simulações.</CardDescription>
 				</CardHeader>
 				<CardContent>
-					<OrdersTable filterId={id} filterType={filterType} />
+					<OrdersTable filterId={id} filterType={type as "pf" | "pj" | undefined} />
 				</CardContent>
 			</Card>
 		</div>

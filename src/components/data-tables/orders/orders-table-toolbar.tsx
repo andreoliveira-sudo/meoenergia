@@ -34,50 +34,31 @@ const statusOptions = [
 export const OrdersTableToolbar = <TData,>({ table }: OrdersTableToolbarProps<TData>) => {
 	const isFiltered = table.getState().columnFilters.length > 0
 
-	const uniqueCities = useMemo(() => {
+	// Compute all unique filter values in a single pass using stable data reference
+	const { uniqueCities, uniqueStates, uniquePartners, uniqueManagers, uniqueCreators } = useMemo(() => {
 		const cities = new Set<string>()
-		table.getCoreRowModel().rows.forEach((row) => {
-			const city = (row.original as OrderWithRelations).city
-			if (city) cities.add(city)
-		})
-		return Array.from(cities).map((city) => ({ label: city, value: city }))
-	}, [table.getCoreRowModel().rows])
-
-	const uniqueStates = useMemo(() => {
 		const states = new Set<string>()
-		table.getCoreRowModel().rows.forEach((row) => {
-			const state = (row.original as OrderWithRelations).state
-			if (state) states.add(state)
-		})
-		return Array.from(states).map((state) => ({ label: state, value: state }))
-	}, [table.getCoreRowModel().rows])
-
-	const uniquePartners = useMemo(() => {
 		const partners = new Set<string>()
-		table.getCoreRowModel().rows.forEach((row) => {
-			const partner = (row.original as OrderWithRelations).partner_name
-			if (partner) partners.add(partner)
-		})
-		return Array.from(partners).map((partner) => ({ label: partner, value: partner }))
-	}, [table.getCoreRowModel().rows])
-
-	const uniqueManagers = useMemo(() => {
 		const managers = new Set<string>()
-		table.getCoreRowModel().rows.forEach((row) => {
-			const manager = (row.original as OrderWithRelations).internal_manager
-			if (manager) managers.add(manager)
-		})
-		return Array.from(managers).map((manager) => ({ label: manager, value: manager }))
-	}, [table.getCoreRowModel().rows])
-
-	const uniqueCreators = useMemo(() => {
 		const creators = new Set<string>()
-		table.getCoreRowModel().rows.forEach((row) => {
-			const createdBy = (row.original as OrderWithRelations).created_by_user
-			if (createdBy) creators.add(createdBy)
-		})
-		return Array.from(creators).map((creator) => ({ label: creator, value: creator }))
-	}, [table.getCoreRowModel().rows])
+
+		const data = table.options.data as OrderWithRelations[]
+		for (const order of data) {
+			if (order.city) cities.add(order.city)
+			if (order.state) states.add(order.state)
+			if (order.partner_name) partners.add(order.partner_name)
+			if (order.internal_manager) managers.add(order.internal_manager)
+			if (order.created_by_user) creators.add(order.created_by_user)
+		}
+
+		return {
+			uniqueCities: Array.from(cities).map((v) => ({ label: v, value: v })),
+			uniqueStates: Array.from(states).map((v) => ({ label: v, value: v })),
+			uniquePartners: Array.from(partners).map((v) => ({ label: v, value: v })),
+			uniqueManagers: Array.from(managers).map((v) => ({ label: v, value: v })),
+			uniqueCreators: Array.from(creators).map((v) => ({ label: v, value: v }))
+		}
+	}, [table.options.data])
 
 	const createdAtFilter = (table.getColumn("created_at")?.getFilterValue() as { from?: string; to?: string }) ?? {}
 
@@ -105,15 +86,15 @@ export const OrdersTableToolbar = <TData,>({ table }: OrdersTableToolbarProps<TD
 					<DataTableFacetedFilter column={table.getColumn("internal_manager")} title="Gestor Interno" options={uniqueManagers} />
 				)}
 
-				{/* 👇 NOVO: Status */}
+				{/* Status */}
 				{table.getColumn("status") && <DataTableFacetedFilter column={table.getColumn("status")} title="Status" options={statusOptions} />}
 
-				{/* 👇 NOVO: Criado por */}
+				{/* Criado por */}
 				{table.getColumn("created_by_user") && (
 					<DataTableFacetedFilter column={table.getColumn("created_by_user")} title="Criado por" options={uniqueCreators} />
 				)}
 
-				{/* 👇 NOVO: intervalo de datas (created_at) */}
+				{/* Intervalo de datas (created_at) */}
 				{table.getColumn("created_at") && (
 					<div className="flex items-center gap-2">
 						<Input

@@ -1,14 +1,12 @@
 "use client"
 
 import Autoplay from "embla-carousel-autoplay"
-import Image, { type StaticImageData } from "next/image"
+import Image from "next/image"
 
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
-import bannerHome1 from "../../public/banner-home-1.jpeg"
-import bannerHome2 from "../../public/banner-home-2.jpeg"
 
 export function BannerCarousel() {
-	const banners: StaticImageData[] = [bannerHome1, bannerHome2]
+	const banners = ["/banner-home-1.jpeg", "/banner-home-2.jpeg"]
 
 	return (
 		<div className="w-full">
@@ -27,7 +25,7 @@ export function BannerCarousel() {
 			>
 				<CarouselContent className="flex items-start">
 					{banners.map((banner, index) => (
-						<CarouselItem key={index}>
+						<CarouselItem key={banner}>
 							<div className="relative w-full h-[200px] md:h-[300px] lg:h-[400px]">
 								<Image
 									src={banner}

@@ -213,7 +213,7 @@ function EditCustomerFormContent({
 														<FormItem>
 															<FormLabel>CNPJ</FormLabel>
 															<FormControl>
-																<Input placeholder="00.000.000/0000-00" {...field} value={field.value ?? ""} onChange={(e) => field.onChange(maskCnpj(e.target.value))} />
+																<Input placeholder="00.000.000/0000-00" {...field} onChange={(e) => field.onChange(maskCnpj(e.target.value))} />
 															</FormControl>
 															<FormMessage />
 														</FormItem>
@@ -226,7 +226,7 @@ function EditCustomerFormContent({
 														<FormItem>
 															<FormLabel>Razão Social</FormLabel>
 															<FormControl>
-																<Input placeholder="Empresa LTDA" {...field} value={field.value ?? ""} />
+																<Input placeholder="Empresa LTDA" {...field} />
 															</FormControl>
 															<FormMessage />
 														</FormItem>
@@ -239,7 +239,7 @@ function EditCustomerFormContent({
 														<FormItem>
 															<FormLabel>Inscrição Estadual (Opcional)</FormLabel>
 															<FormControl>
-																<Input {...field} value={field.value ?? ""} />
+																<Input {...field} />
 															</FormControl>
 															<FormMessage />
 														</FormItem>
@@ -255,7 +255,7 @@ function EditCustomerFormContent({
 														<FormItem>
 															<FormLabel>CPF</FormLabel>
 															<FormControl>
-																<Input placeholder="000.000.000-00" {...field} value={field.value ?? ""} onChange={(e) => field.onChange(maskCpf(e.target.value))} />
+																<Input placeholder="000.000.000-00" {...field} onChange={(e) => field.onChange(maskCpf(e.target.value))} />
 															</FormControl>
 															<FormMessage />
 														</FormItem>
@@ -268,7 +268,7 @@ function EditCustomerFormContent({
 														<FormItem>
 															<FormLabel>Nome Completo</FormLabel>
 															<FormControl>
-																<Input placeholder="Nome do Cliente" {...field} value={field.value ?? ""} />
+																<Input placeholder="Nome do Cliente" {...field} />
 															</FormControl>
 															<FormMessage />
 														</FormItem>
@@ -281,7 +281,7 @@ function EditCustomerFormContent({
 														<FormItem>
 															<FormLabel>RG (Opcional)</FormLabel>
 															<FormControl>
-																<Input {...field} value={field.value ?? ""} />
+																<Input {...field} />
 															</FormControl>
 															<FormMessage />
 														</FormItem>
@@ -299,7 +299,7 @@ function EditCustomerFormContent({
 												<FormItem>
 													<FormLabel>{customerType === "pj" ? "Data de Fundação" : "Data de Nascimento (Opcional)"}</FormLabel>
 													<FormControl>
-														<Input placeholder="DD/MM/AAAA" {...field} value={field.value ?? ""} onChange={(e) => field.onChange(maskDate(e.target.value))} />
+														<Input placeholder="DD/MM/AAAA" {...field} value={field.value || ""} onChange={(e) => field.onChange(maskDate(e.target.value))} />
 													</FormControl>
 													<FormMessage />
 												</FormItem>
@@ -318,7 +318,7 @@ function EditCustomerFormContent({
 																placeholder="0,00"
 																className="pl-9"
 																{...field}
-																value={field.value ?? ""}
+																value={field.value || ""}
 																onChange={(e) => field.onChange(maskNumber(e.target.value, 15))}
 															/>
 														</div>
@@ -341,7 +341,7 @@ function EditCustomerFormContent({
 											<FormItem>
 												<FormLabel>Nome do Responsável</FormLabel>
 												<FormControl>
-													<Input placeholder="João da Silva" {...field} value={field.value ?? ""} />
+													<Input placeholder="João da Silva" {...field} />
 												</FormControl>
 												<FormMessage />
 											</FormItem>
@@ -355,7 +355,7 @@ function EditCustomerFormContent({
 												<FormItem>
 													<FormLabel>Celular</FormLabel>
 													<FormControl>
-														<Input placeholder="(11) 99999-9999" {...field} value={field.value ?? ""} onChange={(e) => field.onChange(maskPhone(e.target.value))} />
+														<Input placeholder="(11) 99999-9999" {...field} onChange={(e) => field.onChange(maskPhone(e.target.value))} />
 													</FormControl>
 													<FormMessage />
 												</FormItem>
@@ -368,7 +368,7 @@ function EditCustomerFormContent({
 												<FormItem>
 													<FormLabel>Email</FormLabel>
 													<FormControl>
-														<Input placeholder="email@exemplo.com" {...field} value={field.value ?? ""} />
+														<Input placeholder="email@exemplo.com" {...field} />
 													</FormControl>
 													<FormMessage />
 												</FormItem>
@@ -390,7 +390,7 @@ function EditCustomerFormContent({
 													<FormLabel>CEP</FormLabel>
 													<FormControl>
 														<div className="relative">
-															<Input placeholder="00000-000" {...field} value={field.value ?? ""} onChange={(e) => field.onChange(maskCep(e.target.value))} onBlur={handleCepBlur} />
+															<Input placeholder="00000-000" {...field} onChange={(e) => field.onChange(maskCep(e.target.value))} onBlur={handleCepBlur} />
 															{isFetchingCep && <Loader2 className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 animate-spin" />}
 														</div>
 													</FormControl>
@@ -405,7 +405,7 @@ function EditCustomerFormContent({
 												<FormItem className="md:col-span-2">
 													<FormLabel>Rua</FormLabel>
 													<FormControl>
-														<Input placeholder="Rua Exemplo" {...field} value={field.value ?? ""} disabled={isFetchingCep} />
+														<Input placeholder="Rua Exemplo" {...field} disabled={isFetchingCep} />
 													</FormControl>
 													<FormMessage />
 												</FormItem>
@@ -420,7 +420,7 @@ function EditCustomerFormContent({
 												<FormItem>
 													<FormLabel>Número</FormLabel>
 													<FormControl>
-														<Input placeholder="123" {...field} value={field.value ?? ""} />
+														<Input placeholder="123" {...field} />
 													</FormControl>
 													<FormMessage />
 												</FormItem>
@@ -433,7 +433,7 @@ function EditCustomerFormContent({
 												<FormItem className="md:col-span-2">
 													<FormLabel>Complemento</FormLabel>
 													<FormControl>
-														<Input placeholder="Apto, Bloco..." {...field} value={field.value ?? ""} />
+														<Input placeholder="Apto, Bloco..." {...field} value={field.value || ""} />
 													</FormControl>
 													<FormMessage />
 												</FormItem>
@@ -448,7 +448,7 @@ function EditCustomerFormContent({
 												<FormItem>
 													<FormLabel>Bairro</FormLabel>
 													<FormControl>
-														<Input placeholder="Bairro" {...field} value={field.value ?? ""} disabled={isFetchingCep} />
+														<Input placeholder="Bairro" {...field} disabled={isFetchingCep} />
 													</FormControl>
 													<FormMessage />
 												</FormItem>
@@ -461,7 +461,7 @@ function EditCustomerFormContent({
 												<FormItem>
 													<FormLabel>Cidade</FormLabel>
 													<FormControl>
-														<Input placeholder="Cidade" {...field} value={field.value ?? ""} disabled={isFetchingCep} />
+														<Input placeholder="Cidade" {...field} disabled={isFetchingCep} />
 													</FormControl>
 													<FormMessage />
 												</FormItem>
@@ -473,7 +473,7 @@ function EditCustomerFormContent({
 											render={({ field }) => (
 												<FormItem>
 													<FormLabel>Estado</FormLabel>
-													<Select onValueChange={field.onChange} defaultValue={field.value ?? ""} value={field.value ?? ""} disabled={isFetchingCep}>
+													<Select onValueChange={field.onChange} defaultValue={field.value} value={field.value} disabled={isFetchingCep}>
 														<FormControl>
 															<SelectTrigger>
 																<SelectValue placeholder="UF">{field.value}</SelectValue>
@@ -551,26 +551,26 @@ export function EditCustomerForm({ customerId, onFinished }: EditCustomerFormPro
 	const initialData = {
 		type: initialType,
 		// Comuns
-		contact_name: customer.contact_name || "",
-		contact_phone: maskPhone(customer.contact_phone) || "",
-		contact_email: customer.contact_email || "",
-		postal_code: maskCep(customer.postal_code) || "",
-		street: customer.street || "",
-		number: customer.number || "",
-		complement: customer.complement || "",
-		neighborhood: customer.neighborhood || "",
-		city: customer.city || "",
-		state: customer.state || "",
-		annual_revenue: customer.annual_revenue ? maskNumber(customer.annual_revenue.toString(), 15) : "",
-		incorporation_date: customer.incorporation_date ? maskDate(customer.incorporation_date.split("-").reverse().join("")) : "",
+		contact_name: customer.contact_name,
+		contact_phone: maskPhone(customer.contact_phone),
+		contact_email: customer.contact_email,
+		postal_code: maskCep(customer.postal_code),
+		street: customer.street,
+		number: customer.number,
+		complement: customer.complement || undefined,
+		neighborhood: customer.neighborhood,
+		city: customer.city,
+		state: customer.state,
+		annual_revenue: customer.annual_revenue ? maskNumber(customer.annual_revenue.toString(), 15) : undefined,
+		incorporation_date: customer.incorporation_date ? maskDate(customer.incorporation_date.split("-").reverse().join("")) : undefined,
 		// PJ
-		cnpj: customer.cnpj ? maskCnpj(customer.cnpj) : "",
-		company_name: customer.company_name || "",
-		ie: customer.ie || "",
+		cnpj: customer.cnpj ? maskCnpj(customer.cnpj) : undefined,
+		company_name: customer.company_name,
+		ie: undefined, // Campo que talvez não venha do banco ainda
 		// PF
-		cpf: customer.cpf ? maskCpf(customer.cpf) : "",
-		name: customer.name || customer.company_name || "",
-		rg: customer.rg || ""
+		cpf: undefined, // Se tivesse no banco, mapearia aqui
+		name: customer.company_name, // Usando company_name como nome para PF provisoriamente se não houver campo 'name' na tabela original
+		rg: undefined
 	} as any
 
 	return <EditCustomerFormContent customerId={customerId} onFinished={onFinished} initialData={initialData} />
