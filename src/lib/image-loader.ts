@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 interface ImageLoaderParams {
 	src: string
@@ -7,8 +7,8 @@ interface ImageLoaderParams {
 }
 
 export default function imageLoader({ src }: ImageLoaderParams): string {
-	const basePath = "/meo"
-	if (src.startsWith(basePath)) return src
+	const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ""
+	if (basePath && src.startsWith(basePath)) return src
 	const normalizedSrc = src.startsWith("/") ? src : `/${src}`
 	return `${basePath}${normalizedSrc}`
 }

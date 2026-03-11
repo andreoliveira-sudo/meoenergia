@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { DollarSign, Download, Edit, Eye, FileDown, Info, Loader2, RefreshCw, Trash2 } from "lucide-react"
@@ -77,7 +77,7 @@ export const OrdersTableActions = ({ order }: { order: OrderWithRelations }) => 
 
 	const handleDownloadPdf = () => {
 		startPdfTransition(() => {
-			window.open("/meo/api/v1/pdf/" + order.id, "_blank")
+			window.open((process.env.NEXT_PUBLIC_BASE_PATH || "") + "/api/v1/pdf/" + order.id, "_blank")
 		})
 	}
 
