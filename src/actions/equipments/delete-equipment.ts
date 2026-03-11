@@ -13,19 +13,14 @@ async function deleteEquipment(equipmentId: number): Promise<ActionResponse<{ eq
 	const supabase = createAdminClient()
 
 	try {
-		const { error } = await supabase.from("equipments").delete().eq("id", equipmentId)
+		const { error } = await supabase
+			.from("equipments")
+			.update({ deleted_at: new Date().toISOString() })
+			.eq("id", equipmentId)
+			.is("deleted_at", null)
 
 		if (error) {
 			console.error("Erro ao deletar equipamento (Supabase):", error)
-
-			if (error.code === "23503") {
-				// Foreign key violation
-				return {
-					success: false,
-					message: "Não é possível deletar este equipamento, pois ele está associado a uma ou mais simulações ou pedidos."
-				}
-			}
-
 			return {
 				success: false,
 				message: "Erro ao deletar o equipamento. Por favor, tente novamente."

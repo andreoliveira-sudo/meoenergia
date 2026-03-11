@@ -34,7 +34,9 @@ export const SimulationsTable = () => {
 
 	const { data, isLoading } = useQuery({
 		queryKey: ["simulations"],
-		queryFn: getSimulationsForCurrentUser
+		queryFn: getSimulationsForCurrentUser,
+		refetchInterval: 30_000,
+		refetchIntervalInBackground: false
 	})
 
 	const table = useReactTable({

@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server"
 async function getAllBrands(): Promise<EquipmentBrand[]> {
 	try {
 		const supabase = await createClient()
-		const { data, error } = await supabase.from("equipment_brands").select("*").order("name")
+		const { data, error } = await supabase.from("equipment_brands").select("*").is("deleted_at", null).order("name")
 
 		if (error) {
 			console.error("Erro ao buscar marcas:", error)

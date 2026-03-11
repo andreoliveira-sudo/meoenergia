@@ -26,6 +26,7 @@ async function getAllPartnersWithSeller(): Promise<PartnerWithSeller[]> {
         )
       `
 			)
+			.is("deleted_at", null)
 			.eq("status", "approved")
 			.eq("is_active", true)
 			.order("legal_business_name")

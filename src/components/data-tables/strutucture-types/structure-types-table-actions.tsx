@@ -3,9 +3,8 @@
 import { useQueryClient } from "@tanstack/react-query"
 import { Edit, Loader2, Trash2 } from "lucide-react"
 import { useState, useTransition } from "react"
-import { toast } from "sonner"
-
 import { deleteStructureType } from "@/actions/equipments"
+import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 import { EditStructureTypeDialog } from "@/components/dialogs/edit-structure-type-dialog"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -15,19 +14,15 @@ export const StructureTypesTableActions = ({ structureType }: { structureType: S
 	const [isDeletePending, startDeleteTransition] = useTransition()
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 	const queryClient = useQueryClient()
+	const { execute } = useOperationFeedback()
 
 	const handleDelete = () => {
 		startDeleteTransition(() => {
-			toast.promise(deleteStructureType(structureType.id), {
-				loading: `Deletando tipo "${structureType.name}"...`,
-				success: (res) => {
-					if (res.success) {
-						queryClient.invalidateQueries({ queryKey: ["structure-types"] })
-						return res.message
-					}
-					throw new Error(res.message)
-				},
-				error: (err: Error) => err.message
+			execute({
+				action: () => deleteStructureType(structureType.id),
+				loadingMessage: `Deletando tipo "${structureType.name}"...`,
+				successMessage: (res) => res.message,
+				onSuccess: () => queryClient.invalidateQueries({ queryKey: ["structure-types"] })
 			})
 		})
 	}

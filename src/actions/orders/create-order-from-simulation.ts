@@ -18,7 +18,7 @@ async function createOrderFromSimulation(simulationId: string): Promise<ActionRe
 
 	try {
 		// 1. Buscar os dados completos da simulação
-		const { data: simulation, error: fetchError } = await supabaseAdmin.from("simulations").select("*").eq("id", simulationId).single()
+		const { data: simulation, error: fetchError } = await supabaseAdmin.from("simulations").select("*").eq("id", simulationId).is("deleted_at", null).single()
 
 		if (fetchError || !simulation) {
 			console.error("Erro ao buscar simulação para criar pedido:", fetchError)
@@ -107,9 +107,9 @@ async function createOrderFromSimulation(simulationId: string): Promise<ActionRe
 	} catch (e) {
 		console.error("Erro inesperado em createOrderFromSimulation:", e)
 
-		// Ação de compensação: se o pedido foi criado mas a cópia de arquivos falhou, removemos o pedido.
+		// Ação de compensação: se o pedido foi criado mas a cópia de arquivos falhou, marcamos como deletado.
 		if (newOrderId) {
-			await supabaseAdmin.from("orders").delete().eq("id", newOrderId)
+			await supabaseAdmin.from("orders").update({ deleted_at: new Date().toISOString() }).eq("id", newOrderId)
 			// Também podemos tentar deletar a pasta do novo pedido no storage se ela foi criada
 			const { data: newFiles } = await supabaseAdmin.storage.from(BUCKET_NAME).list(newOrderId)
 			if (newFiles && newFiles.length > 0) {

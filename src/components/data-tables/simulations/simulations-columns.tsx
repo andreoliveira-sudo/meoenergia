@@ -63,7 +63,11 @@ export const columns: ColumnDef<SimulationWithRelations>[] = [
 	},
 	{
 		accessorKey: "company_name",
-		header: "Razão Social"
+		header: "Razão Social",
+		cell: ({ row }) => {
+			const name = (row.getValue("company_name") as string) || ""
+			return <div className="text-left font-medium">{name.toUpperCase()}</div>
+		}
 	},
 	{
 		accessorKey: "city",

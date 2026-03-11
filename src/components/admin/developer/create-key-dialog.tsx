@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { toast } from 'sonner'
 import { Plus, Copy, AlertTriangle } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -32,6 +31,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 import createApiKey from '@/actions/developer/create-api-key'
+import { useOperationFeedback } from '@/components/feedback/operation-feedback'
 
 const formSchema = z.object({
     name: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
@@ -43,8 +43,8 @@ const formSchema = z.object({
 const AVAILABLE_SCOPES = [
     { id: 'orders:read', label: 'Ver Pedidos' },
     { id: 'orders:write', label: 'Gerenciar Pedidos' },
-    { id: 'simulations:read', label: 'Ver Simulações' },
-    { id: 'simulations:write', label: 'Gerenciar Simulações' },
+    { id: 'simulations:read', label: 'Ver Simulacoes' },
+    { id: 'simulations:write', label: 'Gerenciar Simulacoes' },
     { id: 'partners:read', label: 'Ver Parceiros' },
     { id: 'partners:write', label: 'Gerenciar Parceiros' },
     { id: '*', label: 'Acesso Total (Admin)' },
@@ -53,6 +53,7 @@ const AVAILABLE_SCOPES = [
 export default function CreateKeyDialog({ userId, onKeyCreated }: { userId: string, onKeyCreated: () => void }) {
     const [open, setOpen] = useState(false)
     const [newKey, setNewKey] = useState<string | null>(null)
+    const { execute } = useOperationFeedback()
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -63,29 +64,26 @@ export default function CreateKeyDialog({ userId, onKeyCreated }: { userId: stri
     })
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
-        try {
-            const result = await createApiKey({
+        execute({
+            action: () => createApiKey({
                 name: values.name,
                 scopes: values.scopes,
                 userId
-            })
-
-            if (result.success && result.data) {
-                setNewKey(result.data.key)
-                toast.success('Chave API criada com sucesso')
+            }),
+            loadingMessage: 'Criando chave API...',
+            successMessage: 'Chave API criada com sucesso',
+            onSuccess: (result) => {
+                if (result.success && result.data) {
+                    setNewKey(result.data.key)
+                }
                 onKeyCreated()
-            } else {
-                toast.error(result.message || 'Erro ao criar chave')
             }
-        } catch (error) {
-            toast.error('Erro inesperado')
-        }
+        })
     }
 
     const handleCopy = () => {
         if (newKey) {
             navigator.clipboard.writeText(newKey)
-            toast.success('Copiado para a área de transferência')
         }
     }
 
@@ -107,7 +105,7 @@ export default function CreateKeyDialog({ userId, onKeyCreated }: { userId: stri
                 <DialogHeader className="p-6 pb-4">
                     <DialogTitle>Criar Nova Chave de API</DialogTitle>
                     <DialogDescription>
-                        Esta chave permitirá acesso externo ao sistema.
+                        Esta chave permitira acesso externo ao sistema.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -116,7 +114,7 @@ export default function CreateKeyDialog({ userId, onKeyCreated }: { userId: stri
                         <Alert className="border-green-500 bg-green-50">
                             <AlertTitle className="text-green-700">Chave Criada!</AlertTitle>
                             <AlertDescription className="text-green-700">
-                                Copie sua chave agora. Por segurança, ela não será exibida novamente.
+                                Copie sua chave agora. Por seguranca, ela nao sera exibida novamente.
                             </AlertDescription>
                         </Alert>
                         <div className="flex items-center space-x-2">
@@ -144,9 +142,9 @@ export default function CreateKeyDialog({ userId, onKeyCreated }: { userId: stri
                                         name="name"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Nome da Identificação</FormLabel>
+                                                <FormLabel>Nome da Identificacao</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="Ex: Integração Zapier" {...field} />
+                                                    <Input placeholder="Ex: Integracao Zapier" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -159,7 +157,7 @@ export default function CreateKeyDialog({ userId, onKeyCreated }: { userId: stri
                                         render={() => (
                                             <FormItem>
                                                 <div className="mb-4">
-                                                    <FormLabel className="text-base">Permissões (Escopos)</FormLabel>
+                                                    <FormLabel className="text-base">Permissoes (Escopos)</FormLabel>
                                                     <FormDescription>
                                                         Selecione quais recursos esta chave pode acessar.
                                                     </FormDescription>

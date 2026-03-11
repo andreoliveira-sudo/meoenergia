@@ -1,7 +1,6 @@
 import Image from "next/image"
 import { getCurrentUser, getUserPermissions } from "@/actions/auth"
 import { NavUser } from "@/components/app-sidebar/nav-footer"
-import { Separator } from "@/components/ui/separator"
 import { Sidebar, SidebarFooter, SidebarHeader } from "@/components/ui/sidebar"
 import { createClient } from "@/lib/supabase/server"
 import { AppSidebarContent } from "./app-sidebar-wrapper"
@@ -18,12 +17,29 @@ const AppSidebar = async () => {
 
 	return (
 		<Sidebar collapsible="icon" variant="inset">
-			<SidebarHeader>
-				<Image alt="MEO Leasing" src="/new-logo.png" width={150} height={100} className="mx-auto" />
+			<SidebarHeader className="p-4 pb-3">
+				<div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
+					<Image
+						alt="MEO Energia"
+						src="/logo-azul-branco.png"
+						width={130}
+						height={65}
+						className="group-data-[collapsible=icon]:hidden drop-shadow-sm"
+					/>
+					<Image
+						alt="MEO"
+						src="/logo-azul-branco.png"
+						width={32}
+						height={32}
+						className="hidden group-data-[collapsible=icon]:block"
+					/>
+				</div>
+				{/* Divider gradient */}
+				<div className="mt-2 h-px bg-gradient-to-r from-transparent via-meo-blue/30 to-transparent" />
 			</SidebarHeader>
-			<Separator className="data-[orientation=horizontal]:h-0.5" />
 			<AppSidebarContent userPermissions={[...userPermissions]} userType={userType} />
 			<SidebarFooter>
+				<div className="h-px bg-gradient-to-r from-transparent via-meo-blue/20 to-transparent mb-1" />
 				<NavUser
 					user={{
 						name: userData.name || "Usuário",

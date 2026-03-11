@@ -1,5 +1,6 @@
 "use client"
 
+import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "framer-motion"
@@ -7,6 +8,7 @@ import { Loader2 } from "lucide-react"
 import * as React from "react"
 import { FormProvider, useForm } from "react-hook-form"
 import { toast } from "sonner"
+import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 
 import { getOrderById, updateOrder } from "@/actions/orders"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -21,15 +23,15 @@ import { SimulationStep5 } from "./new-simulation/step-5-documents"
 import {
 	type EditSimulationData,
 	editSimulationSchema,
+	editSimulationStep1Schema,
 	editSimulationStep5Schema,
-	simulationStep1Schema,
 	simulationStep2Schema,
 	simulationStep3Schema,
 	simulationStep4Schema
 } from "./new-simulation/validation/new-simulation"
 
 const STEPS_CONFIG = [
-	{ id: 1, name: "Dados do Projeto", schema: simulationStep1Schema },
+	{ id: 1, name: "Dados do Projeto", schema: editSimulationStep1Schema },
 	{ id: 2, name: "Dados do Cliente", schema: simulationStep2Schema },
 	{ id: 3, name: "Instalação", schema: simulationStep3Schema },
 	{ id: 4, name: "Valores", schema: simulationStep4Schema },
@@ -37,6 +39,12 @@ const STEPS_CONFIG = [
 ]
 
 type ExtendedOrderData = EditSimulationData & {
+	kit_module_brand_id?: string | null
+	kit_inverter_brand_id?: string | null
+	kit_others_brand_id?: string | null
+}
+
+type ExtendedOrderInput = z.input<typeof editSimulationSchema> & {
 	kit_module_brand_id?: string | null
 	kit_inverter_brand_id?: string | null
 	kit_others_brand_id?: string | null
@@ -79,29 +87,18 @@ function EditOrderContent({
 	orderId,
 	customerId,
 	onFinished,
-	initialData,
-	initialServiceFee36,
-	initialServiceFee48,
-	initialServiceFee60,
-	initialInterestRate36,
-	initialInterestRate48,
-	initialInterestRate60
+	initialData
 }: {
 	orderId: string
 	customerId: string
 	onFinished: () => void
-	initialData: ExtendedOrderData
-	initialServiceFee36: number
-	initialServiceFee48: number
-	initialServiceFee60: number
-	initialInterestRate36: number
-	initialInterestRate48: number
-	initialInterestRate60: number
+	initialData: ExtendedOrderInput
 }) {
 	const [currentStep, setCurrentStep] = React.useState(1)
 	const queryClient = useQueryClient()
+	const { execute } = useOperationFeedback()
 
-	const form = useForm<ExtendedOrderData>({
+	const form = useForm<ExtendedOrderInput, any, ExtendedOrderData>({
 		resolver: zodResolver(editSimulationSchema),
 		defaultValues: initialData,
 		mode: "onChange"
@@ -118,7 +115,7 @@ function EditOrderContent({
 			const errors = result.error.issues
 			errors.forEach((error) => {
 				if (error.path.length > 0) {
-					const fieldName = error.path[0] as keyof ExtendedOrderData
+					const fieldName = error.path[0] as keyof ExtendedOrderInput
 					form.setError(fieldName, {
 						type: "manual",
 						message: error.message
@@ -154,29 +151,15 @@ function EditOrderContent({
 	}
 
 	const handleSubmitEntireForm = (data: EditSimulationData) => {
-		const result = editSimulationSchema.safeParse(data)
-
-		if (!result.success) {
-			toast.error("Erro de validação final", {
-				description: "Alguns dados parecem estar inconsistentes. Por favor, revise os passos."
-			})
-			console.error("Final Validation Error:", result.error.flatten().fieldErrors)
-			return
-		}
-
-		toast.promise(updateOrder({ orderId, customerId, data: result.data }), {
-			loading: "Atualizando pedido...",
-			success: (res) => {
-				if (res.success) {
-					queryClient.invalidateQueries({ queryKey: ["orders"] })
-					queryClient.invalidateQueries({ queryKey: ["order-details", orderId] })
-					onFinished()
-					return "Pedido atualizado com sucesso!"
-				}
-				throw new Error(res.message)
-			},
-			error: (err: Error) => {
-				return err.message || "Ocorreu um erro inesperado."
+		execute({
+			action: () => updateOrder({ orderId, customerId, data }),
+			loadingMessage: "Atualizando pedido...",
+			successMessage: "Pedido atualizado com sucesso!",
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: ["orders"] })
+				queryClient.invalidateQueries({ queryKey: ["order-details", orderId] })
+				queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] })
+				onFinished()
 			}
 		})
 	}
@@ -205,13 +188,6 @@ function EditOrderContent({
 								<SimulationStep4
 									onNext={nextStep}
 									onBack={backStep}
-									initialInterestRate36={initialInterestRate36}
-									initialInterestRate48={initialInterestRate48}
-									initialInterestRate60={initialInterestRate60}
-									initialServiceFee36={initialServiceFee36}
-									initialServiceFee48={initialServiceFee48}
-									initialServiceFee60={initialServiceFee60}
-									isEditing={true}
 								/>
 							)}
 							{currentStep === 5 && <SimulationStep5 onSubmit={form.handleSubmit(handleSubmitEntireForm)} onBack={backStep} />}
@@ -233,8 +209,6 @@ export function EditOrderForm({ orderId, onFinished }: { orderId: string; onFini
 	} = useQuery({
 		queryKey: ["order-details", orderId],
 		queryFn: () => getOrderById(orderId),
-		staleTime: 5 * 60 * 1000,
-		refetchOnWindowFocus: false,
 		enabled: !!orderId
 	})
 
@@ -288,8 +262,11 @@ export function EditOrderForm({ orderId, onFinished }: { orderId: string; onFini
 		equipmentValue: formatNumberFromDatabase(order.equipment_value),
 		laborValue: formatNumberFromDatabase(order.labor_value),
 		otherCosts: formatNumberFromDatabase(order.other_costs),
-		// Os campos de arquivo são iniciados como undefined para edição
+		monthlyBillValue: "",
+		financingTerm: order.financing_term ? String(order.financing_term) : "",
+		paymentDay: order.payment_day ? String(order.payment_day) : "",
 		rgCnhSocios: undefined,
+		comprovantePropriedade: undefined,
 		balancoDRE2022: undefined,
 		balancoDRE2023: undefined,
 		balancoDRE2024: undefined,
@@ -303,13 +280,12 @@ export function EditOrderForm({ orderId, onFinished }: { orderId: string; onFini
 		proposta: undefined
 	}
 
-	const initialData: ExtendedOrderData = isPf
+	const initialData: ExtendedOrderInput = isPf
 		? {
 			...commonData,
 			type: "pf",
 			name: customer.name || "",
 			cpf: customer.cpf ? maskCpf(customer.cpf) : "",
-			// Campos PJ ignorados/opcionais
 			legalName: undefined,
 			cnpj: undefined,
 			incorporationDate: undefined
@@ -320,7 +296,6 @@ export function EditOrderForm({ orderId, onFinished }: { orderId: string; onFini
 			legalName: customer.company_name || "",
 			cnpj: maskCnpj(customer.cnpj || ""),
 			incorporationDate: customer.incorporation_date ? customer.incorporation_date.split("-").reverse().join("/") : "",
-			// Campos PF ignorados/opcionais
 			name: undefined,
 			cpf: undefined
 		}
@@ -331,12 +306,6 @@ export function EditOrderForm({ orderId, onFinished }: { orderId: string; onFini
 			customerId={customer.id}
 			onFinished={onFinished}
 			initialData={initialData}
-			initialInterestRate36={order.interest_rate_36 || 0}
-			initialInterestRate48={order.interest_rate_48 || 0}
-			initialInterestRate60={order.interest_rate_60 || 0}
-			initialServiceFee36={order.service_fee_36 || 0}
-			initialServiceFee48={order.service_fee_48 || 0}
-			initialServiceFee60={order.service_fee_60 || 0}
 		/>
 	)
 }

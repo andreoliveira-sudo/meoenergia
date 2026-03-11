@@ -36,6 +36,7 @@ export default async function getGroupMembersAction(groupId: string): Promise<Ac
 				`
 			)
 			.eq("group_id", groupId)
+			.is("deleted_at", null)
 
 		if (error) {
 			return {

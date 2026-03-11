@@ -14,7 +14,7 @@ async function listOrderFiles(orderId: string): Promise<ActionResponse<{ name: s
 
 	try {
 		// 1. Obter o simulation_id a partir do order_id
-		const { data: orderData, error: orderError } = await supabase.from("orders").select("id").eq("id", orderId).single()
+		const { data: orderData, error: orderError } = await supabase.from("orders").select("id").eq("id", orderId).is("deleted_at", null).single()
 
 		if (orderError || !orderData) {
 			return { success: false, message: "Pedido não encontrado." }

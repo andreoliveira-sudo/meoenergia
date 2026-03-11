@@ -6,7 +6,21 @@ import crypto from 'crypto'
 
 import hasPermission from '@/actions/auth/has-permissions'
 
-export default async function createApiKey({ name, scopes, userId }: { name: string, scopes: string[], userId?: string }): Promise<ActionResponse<{ key: string }>> {
+export default async function createApiKey({ 
+    name, 
+    scopes, 
+    partnerId,
+    internalManagerId,
+    webhookUrl,
+    userId 
+}: { 
+    name: string
+    scopes: string[]
+    partnerId?: string  // ✅ Agora opcional
+    internalManagerId?: string  // ✅ Agora opcional
+    webhookUrl?: string 
+    userId?: string 
+}): Promise<ActionResponse<{ key: string }>> {
     const supabase = await createClient()
 
     // 1. Authenticate Request
@@ -34,6 +48,38 @@ export default async function createApiKey({ name, scopes, userId }: { name: str
         }
     }
 
+    // ✅ 4. Buscar partnerId se não fornecido
+    let finalPartnerId = partnerId
+    if (!finalPartnerId) {
+        const { data: partner } = await supabase
+            .from('partners')
+            .select('id')
+            .eq('user_id', targetUserId)
+            .maybeSingle()
+        
+        finalPartnerId = partner?.id || ""
+    }
+
+    // ✅ 5. Buscar internalManagerId se não fornecido
+    let finalInternalManagerId = internalManagerId
+    if (!finalInternalManagerId) {
+        const { data: seller } = await supabase
+            .from('sellers')
+            .select('id')
+            .eq('user_id', targetUserId)
+            .maybeSingle()
+        
+        finalInternalManagerId = seller?.id || ""
+    }
+
+    // ✅ 6. Validar que pelo menos um dos dois existe
+    if (!finalPartnerId && !finalInternalManagerId) {
+        return { 
+            success: false, 
+            message: 'Usuário não possui vínculo com parceiro ou vendedor. Configure um parceiro ou vendedor primeiro.' 
+        }
+    }
+
     // Gerar Chave
     const rawKey = 'meo_sk_' + crypto.randomBytes(24).toString('hex')
     const keyHash = crypto.createHash('sha256').update(rawKey).digest('hex')
@@ -41,9 +87,12 @@ export default async function createApiKey({ name, scopes, userId }: { name: str
 
     try {
         const { error } = await supabase.from('api_keys').insert({
-            user_id: targetUserId, // Trusted ID
+            user_id: targetUserId,
             name,
             scopes,
+            partner_id: finalPartnerId, // ✅ Pode ser null
+            internal_manager_id: finalInternalManagerId, // ✅ Pode ser null
+            webhook_url: webhookUrl || null,
             key_prefix: keyPrefix,
             key_hash: keyHash,
             is_active: true

@@ -1,7 +1,5 @@
 "use server"
 
-import { PostgrestError } from "@supabase/supabase-js"
-
 import { createAdminClient } from "@/lib/supabase/admin"
 import type { ActionResponse } from "@/types/action-response"
 
@@ -13,19 +11,14 @@ async function deleteBrand(brandId: string): Promise<ActionResponse<{ brandId: s
 	const supabase = createAdminClient()
 
 	try {
-		const { error } = await supabase.from("equipment_brands").delete().eq("id", brandId)
+		const { error } = await supabase
+			.from("equipment_brands")
+			.update({ deleted_at: new Date().toISOString() })
+			.eq("id", brandId)
+			.is("deleted_at", null)
 
 		if (error) {
 			console.error("Erro ao deletar marca (Supabase):", error)
-
-			if (error.code === "23503") {
-				// Foreign key violation
-				return {
-					success: false,
-					message: "Não é possível deletar esta marca, pois ela está associada a um ou mais equipamentos."
-				}
-			}
-
 			return {
 				success: false,
 				message: "Erro ao deletar a marca. Por favor, tente novamente."

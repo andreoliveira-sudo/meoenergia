@@ -82,8 +82,10 @@ export default async function createInternalSimulation(
                 .from("customers")
                 .update({
                     ...customerBaseData,
+                    company_name: customerBaseData.company_name ?? undefined,
+                    name: customerBaseData.name ?? undefined,
                     updated_at: new Date().toISOString()
-                })
+                } as any)
                 .eq("id", customerId)
 
             if (updateError) throw new Error(`Erro ao atualizar cliente: ${updateError.message}`)
@@ -127,8 +129,8 @@ export default async function createInternalSimulation(
                 status: createOrder ? "won" : "initial_contact",
                 result: calculationResult as any,
                 system_power: systemPowerValue || calculationResult.systemSize,
-                equipment_value: parseNumericString(data.equipmentValue),
-                labor_value: parseNumericString(data.laborValue),
+                equipment_value: typeof data.equipmentValue === "number" ? data.equipmentValue : parseNumericString(data.equipmentValue as any),
+                labor_value: typeof data.laborValue === "number" ? data.laborValue : parseNumericString(data.laborValue as any),
                 kit_inverter_id: parseInt(data.kit_inverter, 10) || 0,
                 kit_module_id: parseInt(data.kit_module, 10) || 0,
                 kit_others: data.kit_others ? parseNumericString(data.kit_others) : null

@@ -4,27 +4,24 @@ import { sendWhatsAppMessage } from '@/services/evolution-api/send-message'
 // Mapa de status para Trigger Key do banco de dados
 const STATUS_TRIGGER_MAP: Record<string, string> = {
     // Análise
-    analysis_pending: 'ORDER_ANALYSIS_PENDING',
-    pre_analysis: 'ORDER_PRE_ANALYSIS',
-    confirmation_pending: 'ORDER_CONFIRMATION_PENDING',
-    credit_analysis: 'ORDER_CREDIT_ANALYSIS',
-    final_analysis: 'ORDER_FINAL_ANALYSIS',
-    docs_analysis: 'ORDER_DOCS_ANALYSIS',
+    analysis_pending: "ORDER_ANALYSIS_PENDING",
+    analysis_approved: "ORDER_ANALYSIS_APPROVED",
+    analysis_rejected: "ORDER_ANALYSIS_REJECTED",
 
-    // Aprovação
-    approved: 'ORDER_APPROVED',
-    pre_approved: 'ORDER_PRE_APPROVED',
-    pre_approved_orange: 'ORDER_PRE_APPROVED_ORANGE',
+    // Documentação
+    documents_pending: "DOCUMENTS_PENDING",
+    docs_analysis: "ORDER_DOCS_ANALYSIS",
 
-    // Execução / Pendências
-    documents_pending: 'DOCUMENTS_PENDING', // Manter compatibilidade
-    contract_signing: 'CONTRACT_SIGNING', // Manter compatibilidade
-    frozen: 'ORDER_FROZEN',
+    // Execução
+    sending_distributor_invoice: "ORDER_SENDING_DISTRIBUTOR_INVOICE",
+    payment_distributor: "ORDER_PAYMENT_DISTRIBUTOR",
+    access_opinion: "ORDER_ACCESS_OPINION",
+    initial_payment_integrator: "ORDER_INITIAL_PAYMENT_INTEGRATOR",
+    final_payment_integrator: "ORDER_FINAL_PAYMENT_INTEGRATOR",
 
     // Finalização
-    rejected: 'ORDER_REJECTED',
-    canceled: 'ORDER_CANCELED',
-    completed: 'ORDER_COMPLETED',
+    finished: "ORDER_FINISHED",
+    canceled: "ORDER_CANCELED",
 }
 
 export async function handleOrderStatusChange(orderId: string, newStatus: string, authorId?: string) {
@@ -92,7 +89,7 @@ export async function handleOrderStatusChange(orderId: string, newStatus: string
 
     // Dados Extras para Status APROVADO
     let approvedVariables: Record<string, string> = {}
-    if (newStatus === 'approved') {
+    if (newStatus === 'analysis_approved') {
         // Como 'payment_value' e 'term' não existem na tabela simulations atualmente,
         // vamos usar valores de placeholder ou buscar de onde for possível.
         // O customer_name pode vir de order.customers.company_name

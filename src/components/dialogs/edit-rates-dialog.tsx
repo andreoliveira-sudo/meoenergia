@@ -29,9 +29,9 @@ export function EditRatesDialog({ orderId, open, onOpenChange }: EditOrderDialog
 								<CardDescription>Defina a taxa de juros padrão a ser usada nos cálculos de parcelamento.</CardDescription>
 							</CardHeader>
 							<CardContent className="space-y-6">
-								<RateForm isEditingUniqueOrder orderId={orderId} rateId="interest_rate_36" />
-								<RateForm isEditingUniqueOrder orderId={orderId} rateId="interest_rate_48" />
-								<RateForm isEditingUniqueOrder orderId={orderId} rateId="interest_rate_60" />
+								<RateForm isEditingUniqueOrder orderId={orderId} rateId="pj_interest_rate_36" />
+								<RateForm isEditingUniqueOrder orderId={orderId} rateId="pj_interest_rate_48" />
+								<RateForm isEditingUniqueOrder orderId={orderId} rateId="pj_interest_rate_60" />
 							</CardContent>
 						</Card>
 						<Card>
@@ -40,9 +40,9 @@ export function EditRatesDialog({ orderId, open, onOpenChange }: EditOrderDialog
 								<CardDescription>Defina a taxa de serviços a ser aplicada sobre o subtotal do projeto.</CardDescription>
 							</CardHeader>
 							<CardContent className="space-y-6">
-								<RateForm isEditingUniqueOrder orderId={orderId} rateId="service_fee_36" />
-								<RateForm isEditingUniqueOrder orderId={orderId} rateId="service_fee_48" />
-								<RateForm isEditingUniqueOrder orderId={orderId} rateId="service_fee_60" />
+								<RateForm isEditingUniqueOrder orderId={orderId} rateId="pj_service_fee_36" />
+								<RateForm isEditingUniqueOrder orderId={orderId} rateId="pj_service_fee_48" />
+								<RateForm isEditingUniqueOrder orderId={orderId} rateId="pj_service_fee_60" />
 							</CardContent>
 						</Card>
 					</div>

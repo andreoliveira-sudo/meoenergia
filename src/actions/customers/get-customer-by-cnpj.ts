@@ -17,7 +17,7 @@ async function getCustomerByCnpj(cnpj: string): Promise<ActionResponse<Customer 
 
 	try {
 		const supabase = await createClient()
-		const { data: customer, error } = await supabase.from("customers").select("*").eq("cnpj", cleanedCnpj).maybeSingle()
+		const { data: customer, error } = await supabase.from("customers").select("*").eq("cnpj", cleanedCnpj).is("deleted_at", null).maybeSingle()
 
 		if (error) {
 			console.error("Erro ao buscar cliente por CNPJ:", error)

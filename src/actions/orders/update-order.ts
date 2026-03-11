@@ -56,10 +56,12 @@ async function updateOrder({ orderId, customerId, data }: UpdateOrderParams): Pr
 			kit_module_id: Number(data.kit_module),
 			kit_inverter_id: Number(data.kit_inverter),
 			kit_others: data.kit_others ? Number(data.kit_others) : null,
-			equipment_value: parseCurrencyStringToNumber(data.equipmentValue),
-			labor_value: parseCurrencyStringToNumber(data.laborValue),
-			other_costs: parseCurrencyStringToNumber(data.otherCosts),
-			notes: data.notes
+			equipment_value: typeof data.equipmentValue === "number" ? data.equipmentValue : parseCurrencyStringToNumber(data.equipmentValue as any),
+			labor_value: typeof data.laborValue === "number" ? data.laborValue : parseCurrencyStringToNumber(data.laborValue as any),
+			other_costs: typeof data.otherCosts === "number" ? data.otherCosts : parseCurrencyStringToNumber(data.otherCosts as any),
+			notes: data.notes,
+			financing_term: data.financingTerm ? Number(data.financingTerm) : undefined,
+			payment_day: data.paymentDay ? Number(data.paymentDay) : undefined
 		}
 
 		const { error: orderError } = await supabaseAdmin.from("orders").update(orderData).eq("id", orderId)

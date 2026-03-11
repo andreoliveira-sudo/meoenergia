@@ -2,9 +2,8 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Loader2, Trash2 } from "lucide-react"
-import { toast } from "sonner"
-
 import { deleteGroupRuleAction } from "@/actions/groups"
+import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 import { Button } from "@/components/ui/button"
 
 import type { GroupRuleRow } from "./types"
@@ -15,21 +14,16 @@ interface RulesTableActionsProps {
 
 export const RulesTableActions = ({ rule }: RulesTableActionsProps) => {
 	const queryClient = useQueryClient()
+	const { execute } = useOperationFeedback()
 
 	const mutation = useMutation({
-		mutationFn: () => deleteGroupRuleAction(rule.id),
-		onSuccess: (result) => {
-			if (result.success) {
-				toast.success(result.message)
-				queryClient.invalidateQueries({ queryKey: ["group-rules", rule.groupId] })
-			} else {
-				toast.error(result.message)
-			}
-		},
-		onError: (error) => {
-			const message = error instanceof Error ? error.message : "Erro ao remover regra"
-			toast.error(message)
-		}
+		mutationFn: () =>
+			execute({
+				action: () => deleteGroupRuleAction(rule.id),
+				loadingMessage: "Excluindo regra...",
+				successMessage: (res) => res.message,
+				onSuccess: () => queryClient.invalidateQueries({ queryKey: ["group-rules", rule.groupId] })
+			})
 	})
 
 	return (

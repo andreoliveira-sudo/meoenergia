@@ -56,15 +56,24 @@ export const CustomerTableToolbar = <TData,>({ table }: CustomerTableToolbarProp
 		)
 	).map((value) => ({ label: value as string, value: value as string }))
 
+	// opções para Tipo (PF/PJ)
+	const typeOptions = [
+		{ label: "Pessoa Física", value: "pf" },
+		{ label: "Pessoa Jurídica", value: "pj" }
+	]
+
 	return (
 		<div className="flex items-center justify-between">
 			<div className="flex flex-1 flex-wrap items-center gap-2">
 				<Input
-					placeholder="Filtrar por Razão Social..."
+					placeholder="Filtrar por Razão Social/Nome..."
 					value={(table.getColumn("company_name")?.getFilterValue() as string) ?? ""}
 					onChange={(event) => table.getColumn("company_name")?.setFilterValue(event.target.value)}
 					className="h-8 w-[150px] lg:w-[250px]"
 				/>
+
+				{/* Tipo PF/PJ */}
+				{table.getColumn("type") && <DataTableFacetedFilter column={table.getColumn("type")} title="Tipo" options={typeOptions} />}
 
 				{/* Parceiro */}
 				{table.getColumn("partner_name") && <DataTableFacetedFilter column={table.getColumn("partner_name")} title="Parceiro" options={uniquePartners} />}

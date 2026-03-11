@@ -27,7 +27,9 @@ const EquipmentsTable = () => {
 
 	const { data, isLoading } = useQuery<EquipmentWithRelations[]>({
 		queryKey: ["equipments"],
-		queryFn: getAllEquipments
+		queryFn: getAllEquipments,
+		refetchInterval: 30_000,
+		refetchIntervalInBackground: false
 	})
 
 	const table = useReactTable({

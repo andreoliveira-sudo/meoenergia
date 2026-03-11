@@ -4,9 +4,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { DollarSign, Download, Edit, Eye, FileDown, Info, Loader2, RefreshCw, Trash2 } from "lucide-react"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
+
 import { hasPermission } from "@/actions/auth"
 import { deleteOrder, generateOrderPdf, listOrderFiles } from "@/actions/orders"
 import { downloadSimulationFiles } from "@/actions/simulations"
+import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 import { EditOrderDialog } from "@/components/dialogs/edit-order-dialog"
 import { EditRatesDialog } from "@/components/dialogs/edit-rates-dialog"
 import { UpdateOrderStatusDialog } from "@/components/dialogs/update-order-status-dialog"
@@ -39,6 +41,7 @@ export const OrdersTableActions = ({ order }: { order: OrderWithRelations }) => 
 	const [selectedDocs, setSelectedDocs] = useState<Set<DocumentFieldName>>(new Set())
 
 	const queryClient = useQueryClient()
+	const { execute } = useOperationFeedback()
 
 	const { data: canManageStatus } = useQuery({
 		queryKey: ["permission", "orders:status"],
@@ -59,40 +62,22 @@ export const OrdersTableActions = ({ order }: { order: OrderWithRelations }) => 
 
 	const handleDelete = () => {
 		startDeleteTransition(() => {
-			toast.promise(deleteOrder(order.id), {
-				loading: "Deletando pedido...",
-				success: (res) => {
-					if (res.success) {
-						queryClient.invalidateQueries({ queryKey: ["orders"] })
-						return res.message
-					}
-					throw new Error(res.message)
-				},
-				error: (err: Error) => err.message
+			execute({
+				action: () => deleteOrder(order.id),
+				loadingMessage: "Deletando pedido...",
+				successMessage: (res) => res.message,
+				onSuccess: () => {
+					queryClient.invalidateQueries({ queryKey: ["orders"] })
+					queryClient.invalidateQueries({ queryKey: ["orders-paginated"] })
+					queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] })
+				}
 			})
 		})
 	}
 
 	const handleDownloadPdf = () => {
 		startPdfTransition(() => {
-			toast.promise(generateOrderPdf(order.id), {
-				loading: "Gerando PDF da proposta...",
-				success: (result) => {
-					if (!result.success) {
-						throw new Error(result.message)
-					}
-					// Cria um link temporário para o download
-					const link = document.createElement("a")
-					link.href = `data:application/pdf;base64,${result.data.pdfBase64}`
-					link.download = `proposta-pedido-${order.kdi}.pdf`
-					document.body.appendChild(link)
-					link.click()
-					document.body.removeChild(link)
-
-					return "PDF gerado com sucesso! O download deve começar em breve."
-				},
-				error: (err: Error) => err.message
-			})
+			window.open("/meo/api/v1/pdf/" + order.id, "_blank")
 		})
 	}
 
@@ -105,31 +90,25 @@ export const OrdersTableActions = ({ order }: { order: OrderWithRelations }) => 
 		}
 
 		startDownloadTransition(() => {
-			toast.promise(
-				downloadSimulationFiles({
-					simulationId: order.id, // Reutilizando a action de simulação, pois o ID é o mesmo
-					documentNames: Array.from(selectedDocs),
-					customerId: order.customerId
-				}),
-				{
-					loading: "Preparando arquivos para download...",
-					success: (result) => {
-						if (!result.success) {
-							throw new Error(result.message)
-						}
-
-						const link = document.createElement("a")
-						link.href = `data:${result.data.contentType};base64,${result.data.fileBase64}`
-						link.download = result.data.fileName
-						document.body.appendChild(link)
-						link.click()
-						document.body.removeChild(link)
-
-						return "Download iniciado!"
-					},
-					error: (err: Error) => err.message
+			execute({
+				action: () =>
+					downloadSimulationFiles({
+						simulationId: order.id, // Reutilizando a action de simulação, pois o ID é o mesmo
+						documentNames: Array.from(selectedDocs),
+						customerId: order.customerId
+					}),
+				loadingMessage: "Preparando arquivos para download...",
+				successMessage: () => "Download iniciado!",
+				onSuccess: (result) => {
+					if (!result.success) return
+					const link = document.createElement("a")
+					link.href = `data:${result.data.contentType};base64,${result.data.fileBase64}`
+					link.download = result.data.fileName
+					document.body.appendChild(link)
+					link.click()
+					document.body.removeChild(link)
 				}
-			)
+			})
 		})
 	}
 

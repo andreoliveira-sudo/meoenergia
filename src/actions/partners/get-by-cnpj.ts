@@ -12,7 +12,7 @@ async function getPartnerByCNPJ({ cnpj }: GetPartnerByCNPJProps): Promise<Action
 	try {
 		const supabase = await createClient()
 
-		const { data: partner, error: getPartnerByCNPJError } = await supabase.from("partners").select("*").eq("cnpj", cnpj).maybeSingle()
+		const { data: partner, error: getPartnerByCNPJError } = await supabase.from("partners").select("*").eq("cnpj", cnpj).is("deleted_at", null).maybeSingle()
 
 		if (getPartnerByCNPJError) {
 			console.error("Erro do Supabase:", getPartnerByCNPJError)

@@ -8,7 +8,7 @@ async function getAllApprovedSellers(): Promise<Seller[]> {
 		const supabase = await createClient()
 
 		// Modificação: Adicionado filtro para retornar apenas vendedores aprovados E ativos.
-		const { data: sellers, error } = await supabase.from("sellers").select("*").eq("status", "approved").eq("is_active", true)
+		const { data: sellers, error } = await supabase.from("sellers").select("*").is("deleted_at", null).eq("status", "approved").eq("is_active", true)
 
 		if (error) {
 			console.error("Erro na consulta:", error)

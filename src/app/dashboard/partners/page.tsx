@@ -4,7 +4,7 @@ import { hasPermission } from "@/actions/auth"
 import { PartnerTable } from "@/components/data-tables/partners/partner-table"
 import { AddPartnerDialog } from "@/components/dialogs/add-partner-dialog"
 
-const PartnersPage = async () => {
+const PartnersPage = async ({ searchParams }: { searchParams: Promise<{ dateFrom?: string; dateTo?: string }> }) => {
 	const canViewPartners = await hasPermission("partners:view")
 
 	if (!canViewPartners) {
@@ -12,6 +12,7 @@ const PartnersPage = async () => {
 	}
 
 	const canManagePartners = await hasPermission("partners:manage")
+	const { dateFrom, dateTo } = (await searchParams) || {}
 
 	return (
 		<>
@@ -23,7 +24,7 @@ const PartnersPage = async () => {
 
 				{canManagePartners && <AddPartnerDialog />}
 			</div>
-			<PartnerTable />
+			<PartnerTable dateFrom={dateFrom} dateTo={dateTo} />
 		</>
 	)
 }

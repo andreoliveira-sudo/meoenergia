@@ -9,13 +9,14 @@ interface DataTableProps<TData> {
 	table: Table<TData>
 	toolbar?: React.ReactNode
 	emptyStateMessage?: string
+	totalCount?: number
 }
 
-export function DataTable<TData>({ table, toolbar, emptyStateMessage = "Nenhum resultado." }: DataTableProps<TData>) {
+export function DataTable<TData>({ table, toolbar, emptyStateMessage = "Nenhum resultado.", totalCount }: DataTableProps<TData>) {
 	return (
 		<div className="w-full space-y-4">
 			{toolbar}
-			<div className="rounded-md border bg-card">
+			<div className="rounded-xl border border-gray-100 bg-white shadow-sm overflow-hidden">
 				<UITable>
 					<TableHeader>
 						{table.getHeaderGroups().map((headerGroup) => (
@@ -51,7 +52,7 @@ export function DataTable<TData>({ table, toolbar, emptyStateMessage = "Nenhum r
 					</TableBody>
 				</UITable>
 			</div>
-			<DataTablePagination table={table} />
+			<DataTablePagination table={table} totalCount={totalCount} />
 		</div>
 	)
 }

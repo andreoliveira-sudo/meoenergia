@@ -3,10 +3,10 @@
 import { useQueryClient } from "@tanstack/react-query"
 import { Edit, Loader2, Trash2 } from "lucide-react"
 import { useState, useTransition } from "react"
-import { toast } from "sonner"
 
 import { deleteBrand } from "@/actions/equipments"
 import { EditBrandDialog } from "@/components/dialogs/edit-brand-dialog"
+import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import type { EquipmentBrand } from "@/lib/definitions/equipments"
@@ -15,19 +15,15 @@ export const BrandsTableActions = ({ brand }: { brand: EquipmentBrand }) => {
 	const [isDeletePending, startDeleteTransition] = useTransition()
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 	const queryClient = useQueryClient()
+	const { execute } = useOperationFeedback()
 
 	const handleDelete = () => {
 		startDeleteTransition(() => {
-			toast.promise(deleteBrand(brand.id), {
-				loading: `Deletando marca "${brand.name}"...`,
-				success: (res) => {
-					if (res.success) {
-						queryClient.invalidateQueries({ queryKey: ["brands"] })
-						return res.message
-					}
-					throw new Error(res.message)
-				},
-				error: (err: Error) => err.message
+			execute({
+				action: () => deleteBrand(brand.id),
+				loadingMessage: `Deletando marca "${brand.name}"...`,
+				successMessage: (res) => res.message,
+				onSuccess: () => queryClient.invalidateQueries({ queryKey: ["brands"] })
 			})
 		})
 	}

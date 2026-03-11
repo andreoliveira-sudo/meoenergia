@@ -1,6 +1,7 @@
 // edit-simulation-form.tsx
 "use client"
 
+import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "framer-motion"
@@ -37,6 +38,12 @@ const STEPS_CONFIG = [
 ]
 
 type ExtendedSimulationData = EditSimulationData & {
+	kit_module_brand_id?: string | null
+	kit_inverter_brand_id?: string | null
+	kit_others_brand_id?: string | null
+}
+
+type ExtendedSimulationInput = z.input<typeof editSimulationSchema> & {
 	kit_module_brand_id?: string | null
 	kit_inverter_brand_id?: string | null
 	kit_others_brand_id?: string | null
@@ -90,7 +97,7 @@ function EditSimulationContent({
 	simulationId: string
 	customerId: string
 	onFinished: () => void
-	initialData: ExtendedSimulationData
+	initialData: ExtendedSimulationInput
 	initialServiceFee36: number
 	initialServiceFee48: number
 	initialServiceFee60: number
@@ -101,7 +108,7 @@ function EditSimulationContent({
 	const [currentStep, setCurrentStep] = React.useState(1)
 	const queryClient = useQueryClient()
 
-	const form = useForm<ExtendedSimulationData>({
+	const form = useForm<ExtendedSimulationInput, any, ExtendedSimulationData>({
 		resolver: zodResolver(editSimulationSchema),
 		defaultValues: initialData,
 		mode: "onChange"
@@ -118,7 +125,7 @@ function EditSimulationContent({
 			const errors = result.error.issues
 			errors.forEach((error) => {
 				if (error.path.length > 0) {
-					const fieldName = error.path[0] as keyof ExtendedSimulationData
+					const fieldName = error.path[0] as keyof ExtendedSimulationInput
 					form.setError(fieldName, {
 						type: "manual",
 						message: error.message
@@ -207,13 +214,6 @@ function EditSimulationContent({
 								<SimulationStep4
 									onNext={nextStep}
 									onBack={backStep}
-									initialInterestRate36={initialInterestRate36}
-									initialInterestRate48={initialInterestRate48}
-									initialInterestRate60={initialInterestRate60}
-									initialServiceFee36={initialServiceFee36}
-									initialServiceFee48={initialServiceFee48}
-									initialServiceFee60={initialServiceFee60}
-									isEditing={true}
 								/>
 							)}
 							{currentStep === 5 && <SimulationStep5 onSubmit={form.handleSubmit(handleSubmitEntireForm)} onBack={backStep} />}
@@ -282,6 +282,9 @@ export function EditSimulationForm({ simulationId, onFinished }: { simulationId:
 		equipmentValue: formatNumberFromDatabase(simulation.equipment_value),
 		laborValue: formatNumberFromDatabase(simulation.labor_value),
 		otherCosts: formatNumberFromDatabase(simulation.other_costs),
+		// NOVOS CAMPOS mapeados para edição
+		financingTerm: (simulation as any).financing_term?.toString(),
+		paymentDay: (simulation as any).payment_day?.toString(),
 		// Os campos de arquivo são iniciados como undefined para edição
 		rgCnhSocios: undefined,
 		balancoDRE2022: undefined,
@@ -297,7 +300,7 @@ export function EditSimulationForm({ simulationId, onFinished }: { simulationId:
 		proposta: undefined
 	}
 
-	const initialData: ExtendedSimulationData = isPf
+	const initialData: ExtendedSimulationInput = isPf
 		? {
 			...commonData,
 			type: "pf",

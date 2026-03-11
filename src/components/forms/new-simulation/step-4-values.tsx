@@ -1,228 +1,236 @@
-/** biome-ignore-all lint/suspicious/noArrayIndexKey: <dont need this> */
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
-import { ArrowLeft, ArrowRight, DollarSign } from "lucide-react"
+import { ArrowLeft, ArrowRight, DollarSign, Calendar, Clock } from "lucide-react"
 import { useFormContext } from "react-hook-form"
+import { useEffect, useRef, useMemo, useState } from "react"
 
-import { getRate } from "@/actions/settings"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { maskNumber } from "@/lib/masks"
-import { calculateInstallmentPayment } from "@/lib/utils"
 
-const formatCurrency = (value: number): string => {
+const FINANCING_TERMS_PF = [24, 30, 36, 48, 60, 72, 84, 96]
+const FINANCING_TERMS_PJ = [36, 48, 60]
+const PAYMENT_DAYS = [5, 15, 20, 30]
+
+type FeeRates = { managementFeePercent: number; serviceFeePercent: number }
+
+type Step4Props = {
+	onBack: () => void
+	onNext?: () => void
+	onSubmit?: () => void
+	isLastStep?: boolean
+	feeRates?: FeeRates
+}
+
+const formatCurrencyStatic = (value: number): string => {
+	if (!value || isNaN(value)) return "R$ 0"
+	return `R$ ${Math.round(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`
+}
+
+function useFormattedCurrency(value: number): string {
+	const [mounted, setMounted] = useState(false)
+	useEffect(() => { setMounted(true) }, [])
+	if (!mounted) return formatCurrencyStatic(value)
 	return new Intl.NumberFormat("pt-BR", {
-		style: "currency",
-		currency: "BRL"
+		style: "currency", currency: "BRL",
+		maximumFractionDigits: 0, minimumFractionDigits: 0,
 	}).format(value || 0)
 }
 
-const parseCurrency = (value: string | undefined): number => {
+const parseCurrency = (value?: string): number => {
 	if (!value) return 0
 	return parseFloat(value.replace(/\D/g, "")) / 100 || 0
 }
 
-const installmentTerms = [12, 24, 36, 48, 60, 72]
-
-// Tipagem melhorada para os props
-type Step4PropsCreate = {
-	onNext: () => void
-	onBack: () => void
-	isEditing?: false | null | undefined
-	initialServiceFee36?: never
-	initialServiceFee48?: never
-	initialServiceFee60?: never
-	initialInterestRate36?: never
-	initialInterestRate48?: never
-	initialInterestRate60?: never
-}
-
-type Step4PropsEdit = {
-	onNext: () => void
-	onBack: () => void
-	isEditing: true
-	initialServiceFee36: number
-	initialServiceFee48: number
-	initialServiceFee60: number
-	initialInterestRate36: number
-	initialInterestRate48: number
-	initialInterestRate60: number
-}
-
-type Step4Props = Step4PropsCreate | Step4PropsEdit
-
-const SimulationStep4 = ({
-	onNext,
-	onBack,
-	initialServiceFee36,
-	initialServiceFee48,
-	initialServiceFee60,
-	isEditing,
-	initialInterestRate36,
-	initialInterestRate48,
-	initialInterestRate60
-}: Step4Props) => {
+export function SimulationStep4({ onBack, onNext, onSubmit, isLastStep = false, feeRates }: Step4Props) {
 	const form = useFormContext()
 
-	const { data: rates, isLoading: isLoadingRates } = useQuery({
-		queryKey: ["rates", "interest_rate_36", "interest_rate_48", "interest_rate_60", "service_fee_36", "service_fee_48", "service_fee_60"],
-		queryFn: async () => {
-			const [interestRate36Res, interestRate48Res, interestRate60Res, serviceFee36Res, serviceFee48Res, serviceFee60Res] = await Promise.all([
-				getRate("interest_rate_36"),
-				getRate("interest_rate_48"),
-				getRate("interest_rate_60"),
-				getRate("service_fee_36"),
-				getRate("service_fee_48"),
-				getRate("service_fee_60")
-			])
+	// ── Mount guard ──────────────────────────────────────────────────────────
+	const [mounted, setMounted] = useState(false)
+	useEffect(() => { setMounted(true) }, [])
 
-			if (
-				!interestRate36Res.success ||
-				!interestRate48Res.success ||
-				!interestRate60Res.success ||
-				!serviceFee36Res.success ||
-				!serviceFee48Res.success ||
-				!serviceFee60Res.success
-			) {
-				throw new Error("Não foi possível carregar as taxas de juros e serviços para a simulação.")
-			}
+	// ── Tipo de cliente ──────────────────────────────────────────────────────
+	const customerType = form.watch("type")
+	const isPF = mounted ? customerType === "pf" : false
+	const financingTerms = isPF ? FINANCING_TERMS_PF : FINANCING_TERMS_PJ
 
-			return {
-				interest_rate_36: interestRate36Res.data / 100,
-				interest_rate_48: interestRate48Res.data / 100,
-				interest_rate_60: interestRate60Res.data / 100,
-				service_fee_36: serviceFee36Res.data / 100,
-				service_fee_48: serviceFee48Res.data / 100,
-				service_fee_60: serviceFee60Res.data / 100
-			}
-		},
-		staleTime: 5 * 60 * 1000, // 5 minutes
-		retry: 3,
-		retryDelay: 1000,
-		enabled: !isEditing
-	})
+	// ── Taxas — usa prop do pai, com fallback seguro ─────────────────────────
+	const rates: FeeRates = feeRates ?? { managementFeePercent: 8, serviceFeePercent: 8 }
 
-	const watchedStringValues = form.watch(["equipmentValue", "laborValue", "otherCosts"])
+	// ── Reset prazo/dia quando tipo muda ────────────────────────────────────
+	const isFirstRender = useRef(true)
+	const prevCustomerType = useRef(customerType)
 
-	const [equipment, labor, others] = watchedStringValues.map(parseCurrency)
-	const subtotal = (equipment || 0) + (labor || 0) + (others || 0)
+	useEffect(() => {
+		if (isFirstRender.current) {
+			isFirstRender.current = false
+			prevCustomerType.current = customerType
+			return
+		}
+		if (prevCustomerType.current !== customerType) {
+			prevCustomerType.current = customerType
+			form.setValue("financingTerm", "")
+			form.setValue("paymentDay", "")
+		}
+	}, [customerType, form])
 
-	// Lógica para determinar qual serviceFee usar
-	const serviceFee36 = isEditing ? initialServiceFee36 / 100 : (rates?.service_fee_36 ?? 0.35)
-	const serviceFee48 = isEditing ? initialServiceFee48 / 100 : (rates?.service_fee_48 ?? 0.35)
-	const serviceFee60 = isEditing ? initialServiceFee60 / 100 : (rates?.service_fee_60 ?? 0.35)
+	// ── Cálculos ─────────────────────────────────────────────────────────────
+	const [equipmentValue, laborValue] = form.watch(["equipmentValue", "laborValue"])
 
-	const interestRate36 = isEditing ? initialInterestRate36 / 100 : (rates?.interest_rate_36 ?? 0.021)
-	const interestRate48 = isEditing ? initialInterestRate48 / 100 : (rates?.interest_rate_48 ?? 0.021)
-	const interestRate60 = isEditing ? initialInterestRate60 / 100 : (rates?.interest_rate_60 ?? 0.021)
+	const { subtotal, managementFeeValue, serviceFeeValue, totalValue } = useMemo(() => {
+		const equipment = parseCurrency(equipmentValue)
+		const labor     = parseCurrency(laborValue)
+		const subtotal   = equipment + labor
+		const management = subtotal * (rates.managementFeePercent / 100)
+		const service    = (subtotal + management) * (rates.serviceFeePercent / 100)
+		return {
+			subtotal,
+			managementFeeValue: management,
+			serviceFeeValue:    service,
+			totalValue:         subtotal + management + service,
+		}
+	}, [equipmentValue, laborValue, rates])
 
-	const servicesValue36 = subtotal * serviceFee36
-	const servicesValue48 = subtotal * serviceFee48
-	const servicesValue60 = subtotal * serviceFee60
+	const formattedSubtotal      = useFormattedCurrency(subtotal)
+	const formattedManagementFee = useFormattedCurrency(managementFeeValue)
+	const formattedServiceFee    = useFormattedCurrency(serviceFeeValue)
+	const formattedTotal         = useFormattedCurrency(totalValue)
 
-	const formattedServicesValue36 = formatCurrency(servicesValue36)
-	const formattedServicesValue48 = formatCurrency(servicesValue48)
-	const formattedServicesValue60 = formatCurrency(servicesValue60)
+	// ── Sincroniza no form ───────────────────────────────────────────────────
+	useEffect(() => {
+		form.setValue("otherCosts",     serviceFeeValue.toFixed(2))
+		form.setValue("managementFee",  managementFeeValue.toFixed(2))
+	}, [serviceFeeValue, managementFeeValue, form])
 
-	const totalInvestment36 = subtotal + servicesValue36
-	const totalInvestment48 = subtotal + servicesValue48
-	const totalInvestment60 = subtotal + servicesValue60
+	// ── Ação principal ───────────────────────────────────────────────────────
+	const handlePrimaryAction = async () => {
+		if (!form.getValues("financingTerm")) {
+			form.setError("financingTerm", { message: "Selecione o prazo de financiamento" })
+			return
+		}
+		if (!form.getValues("paymentDay")) {
+			form.setError("paymentDay", { message: "Selecione o dia de pagamento" })
+			return
+		}
+		isLastStep ? onSubmit?.() : onNext?.()
+	}
 
-	const formattedTotalInvestment36 = formatCurrency(totalInvestment36)
-	const formattedTotalInvestment48 = formatCurrency(totalInvestment48)
-	const formattedTotalInvestment60 = formatCurrency(totalInvestment60)
-
+	// ── Render ───────────────────────────────────────────────────────────────
 	return (
-		<form className="space-y-6">
-			<div className="grid grid-cols-1 @lg:grid-cols-2 gap-6">
-				<div className="w-full space-y-6">
-					<h3 className="text-lg font-medium">Passo 4: Valores</h3>
-					<FormField
-						control={form.control}
-						name="equipmentValue"
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>Valor dos Equipamentos *</FormLabel>
-								<FormControl>
-									<div className="relative">
-										<DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-										<Input type="text" placeholder="0,00" className="pl-9" {...field} onChange={(e) => field.onChange(maskNumber(e.target.value, 14))} />
-									</div>
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-					<FormField
-						control={form.control}
-						name="laborValue"
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>Valor da Mão de Obra *</FormLabel>
-								<FormControl>
-									<div className="relative">
-										<DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-										<Input type="text" placeholder="0,00" className="pl-9" {...field} onChange={(e) => field.onChange(maskNumber(e.target.value, 14))} />
-									</div>
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-					<FormField
-						control={form.control}
-						name="otherCosts"
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>Outros Custos (Opcional)</FormLabel>
-								<FormControl>
-									<div className="relative">
-										<DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-										<Input type="text" placeholder="0,00" className="pl-9" {...field} onChange={(e) => field.onChange(maskNumber(e.target.value, 14))} />
-									</div>
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
+		<div className="space-y-8">
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-					<div className="space-y-4">
-						<h4 className="font-medium">Valores de Serviços por Prazo</h4>
+				{/* LEFT COLUMN */}
+				<div className="space-y-6">
+					<h3 className="text-lg font-medium">Passo 4: Valores e Condições</h3>
 
-						<FormItem>
-							<FormLabel>Serviços (36 meses)</FormLabel>
-							<FormControl>
-								<div className="relative">
-									<DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-									<Input type="text" className="pl-9" value={formattedServicesValue36} disabled />
-								</div>
-							</FormControl>
-						</FormItem>
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+						<FormField
+							control={form.control}
+							name="equipmentValue"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Equipamentos *</FormLabel>
+									<FormControl>
+										<div className="relative">
+											<DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+											<Input placeholder="0,00" className="pl-9" {...field} value={field.value ?? ""} onChange={(e) => field.onChange(maskNumber(e.target.value, 14))} />
+										</div>
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+						<FormField
+							control={form.control}
+							name="laborValue"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Mão de Obra *</FormLabel>
+									<FormControl>
+										<div className="relative">
+											<DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+											<Input placeholder="0,00" className="pl-9" {...field} value={field.value ?? ""} onChange={(e) => field.onChange(maskNumber(e.target.value, 14))} />
+										</div>
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+					</div>
 
-						<FormItem>
-							<FormLabel>Serviços (48 meses)</FormLabel>
-							<FormControl>
-								<div className="relative">
-									<DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-									<Input type="text" className="pl-9" value={formattedServicesValue48} disabled />
-								</div>
-							</FormControl>
-						</FormItem>
+					{/* RESUMO FINANCEIRO */}
+					<div className="p-4 bg-muted/30 rounded-lg border border-dashed space-y-2">
+						<div className="flex justify-between text-sm">
+							<span className="text-muted-foreground">Subtotal</span>
+							<span suppressHydrationWarning>{formattedSubtotal}</span>
+						</div>
+						<div className="flex justify-between text-sm">
+							<span className="text-muted-foreground">Tarifa de Gestão</span>
+							<span className="font-medium text-blue-600" suppressHydrationWarning>{formattedManagementFee}</span>
+						</div>
+						<div className="flex justify-between text-sm">
+							<span className="text-muted-foreground">Tarifa de Contratação</span>
+							<span className="font-medium text-blue-600" suppressHydrationWarning>{formattedServiceFee}</span>
+						</div>
+						<div className="border-t pt-2 mt-2 flex justify-between font-bold">
+							<span>Total da Proposta</span>
+							<span className="text-lg" suppressHydrationWarning>{formattedTotal}</span>
+						</div>
+					</div>
 
-						<FormItem>
-							<FormLabel>Serviços (60 meses)</FormLabel>
-							<FormControl>
-								<div className="relative">
-									<DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-									<Input type="text" className="pl-9" value={formattedServicesValue60} disabled />
-								</div>
-							</FormControl>
-						</FormItem>
+					{/* PRAZO + DIA */}
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+						<FormField
+							control={form.control}
+							name="financingTerm"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Prazo (Meses) *</FormLabel>
+									<Select onValueChange={field.onChange} value={field.value != null ? String(field.value) : ""}>
+										<FormControl>
+											<SelectTrigger className="pl-9 relative">
+												<Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+												<SelectValue placeholder="Selecione..." />
+											</SelectTrigger>
+										</FormControl>
+										<SelectContent>
+											{financingTerms.map((term) => (
+												<SelectItem key={term} value={String(term)}>{term} meses</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+						<FormField
+							control={form.control}
+							name="paymentDay"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Dia de Pagamento *</FormLabel>
+									<Select onValueChange={field.onChange} value={field.value != null ? String(field.value) : ""}>
+										<FormControl>
+											<SelectTrigger className="pl-9 relative">
+												<Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+												<SelectValue placeholder="Selecione..." />
+											</SelectTrigger>
+										</FormControl>
+										<SelectContent>
+											{PAYMENT_DAYS.map((day) => (
+												<SelectItem key={day} value={String(day)}>Dia {String(day).padStart(2, "0")}</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
 					</div>
 
 					<FormField
@@ -230,167 +238,63 @@ const SimulationStep4 = ({
 						name="notes"
 						render={({ field }) => (
 							<FormItem>
-								<FormLabel className="text-[#1d9bf0]">Observações</FormLabel>
+								<FormLabel>Observações</FormLabel>
 								<FormControl>
-									<Textarea
-										className="border-[#1d9bf0]"
-										placeholder={"Documentação: Preencher com DRE da empresa\n\n" + "Reprovação por protestos: Preencher apenas alguns dias depois"}
-										{...field}
-									/>
+									<Textarea className="min-h-[100px]" placeholder="Informações adicionais..." {...field} />
 								</FormControl>
 								<FormMessage />
 							</FormItem>
 						)}
 					/>
 				</div>
-				<div className="w-full space-y-6">
-					<Card className="shadow-lg border-2 hover:shadow-xl transition-shadow">
-						<CardHeader className="pb-4">
-							<div className="flex items-center justify-between">
-								<CardTitle className="text-xl">Plano 36 meses</CardTitle>
-								<div className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-semibold">Curto Prazo</div>
-							</div>
-							<CardDescription>Taxa de juros e serviços aplicados para 36 meses</CardDescription>
-						</CardHeader>
-						<CardContent className="space-y-6">
-							{!isEditing && isLoadingRates ? (
-								<div className="space-y-4">
-									<Skeleton className="h-24 w-full rounded-xl" />
-									<Skeleton className="h-20 w-full rounded-lg" />
-								</div>
-							) : (
-								<>
-									<div className="flex flex-col items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 p-6 border-2 border-primary/20">
-										<span className="text-sm font-medium text-muted-foreground mb-1">Total do Investimento</span>
-										<span className="font-bold text-4xl text-primary">{formattedTotalInvestment36}</span>
-									</div>
-									<div className="rounded-lg bg-muted/50 p-5 border">
-										<div className="flex items-center justify-between mb-3">
-											<h4 className="font-semibold text-base">Parcelamento</h4>
-										</div>
-										{installmentTerms
-											.filter((term) => term === 36)
-											.map((term, index) => {
-												const installment = calculateInstallmentPayment({
-													rate: interestRate36,
-													numberOfPeriods: term,
-													presentValue: totalInvestment36
-												})
-												return (
-													<div key={`${term}-${index}`} className="flex items-center justify-between p-3 rounded-lg bg-background border">
-														<span className="text-sm font-medium text-muted-foreground">{term} parcelas de</span>
-														<span className="font-bold text-lg">{formatCurrency(installment)}</span>
-													</div>
-												)
-											})}
-									</div>
-								</>
-							)}
-						</CardContent>
-					</Card>
 
-					<Card className="shadow-lg border-2 hover:shadow-xl transition-shadow">
-						<CardHeader className="pb-4">
-							<div className="flex items-center justify-between">
-								<CardTitle className="text-xl">Plano 48 meses</CardTitle>
-								<div className="px-3 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full text-xs font-semibold">Médio Prazo</div>
-							</div>
-							<CardDescription>Taxa de juros e serviços aplicados para 48 meses</CardDescription>
+				{/* RIGHT COLUMN */}
+				<div>
+					<Card className="border-l-4 border-l-primary shadow-md">
+						<CardHeader>
+							<CardTitle className="flex items-center gap-2">
+								<DollarSign className="w-5 h-5 text-primary" />
+								Resumo do Pedido
+							</CardTitle>
+							<CardDescription>Revise antes de finalizar.</CardDescription>
 						</CardHeader>
-						<CardContent className="space-y-6">
-							{!isEditing && isLoadingRates ? (
-								<div className="space-y-4">
-									<Skeleton className="h-24 w-full rounded-xl" />
-									<Skeleton className="h-20 w-full rounded-lg" />
-								</div>
-							) : (
-								<>
-									<div className="flex flex-col items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 p-6 border-2 border-blue-500/20">
-										<span className="text-sm font-medium text-muted-foreground mb-1">Total do Investimento</span>
-										<span className="font-bold text-4xl text-blue-600 dark:text-blue-400">{formattedTotalInvestment48}</span>
-									</div>
-									<div className="rounded-lg bg-muted/50 p-5 border">
-										<div className="flex items-center justify-between mb-3">
-											<h4 className="font-semibold text-base">Parcelamento</h4>
-										</div>
-										{installmentTerms
-											.filter((term) => term === 48)
-											.map((term, index) => {
-												const installment = calculateInstallmentPayment({
-													rate: interestRate48,
-													numberOfPeriods: term,
-													presentValue: totalInvestment48
-												})
-												return (
-													<div key={`${term}-${index}`} className="flex items-center justify-between p-3 rounded-lg bg-background border">
-														<span className="text-sm font-medium text-muted-foreground">{term} parcelas de</span>
-														<span className="font-bold text-lg">{formatCurrency(installment)}</span>
-													</div>
-												)
-											})}
-									</div>
-								</>
-							)}
-						</CardContent>
-					</Card>
-
-					<Card className="shadow-lg border-2 hover:shadow-xl transition-shadow">
-						<CardHeader className="pb-4">
-							<div className="flex items-center justify-between">
-								<CardTitle className="text-xl">Plano 60 meses</CardTitle>
-								<div className="px-3 py-1 bg-green-500/10 text-green-600 dark:text-green-400 rounded-full text-xs font-semibold">Longo Prazo</div>
+						<CardContent className="space-y-4">
+							<div className="flex flex-col items-center py-8 rounded-xl bg-primary/5 border">
+								<span className="text-sm text-muted-foreground">Total do Pedido</span>
+								<span className="text-3xl font-bold text-primary" suppressHydrationWarning>
+									{formattedTotal}
+								</span>
 							</div>
-							<CardDescription>Taxa de juros e serviços aplicados para 60 meses</CardDescription>
-						</CardHeader>
-						<CardContent className="space-y-6">
-							{!isEditing && isLoadingRates ? (
-								<div className="space-y-4">
-									<Skeleton className="h-24 w-full rounded-xl" />
-									<Skeleton className="h-20 w-full rounded-lg" />
+							<div className="space-y-2 text-sm">
+								<div className="flex justify-between text-muted-foreground">
+									<span>Subtotal</span>
+									<span suppressHydrationWarning>{formattedSubtotal}</span>
 								</div>
-							) : (
-								<>
-									<div className="flex flex-col items-center justify-center rounded-xl bg-gradient-to-br from-green-500/10 to-green-500/5 p-6 border-2 border-green-500/20">
-										<span className="text-sm font-medium text-muted-foreground mb-1">Total do Investimento</span>
-										<span className="font-bold text-4xl text-green-600 dark:text-green-400">{formattedTotalInvestment60}</span>
-									</div>
-									<div className="rounded-lg bg-muted/50 p-5 border">
-										<div className="flex items-center justify-between mb-3">
-											<h4 className="font-semibold text-base">Parcelamento</h4>
-										</div>
-										{installmentTerms
-											.filter((term) => term === 60)
-											.map((term, index) => {
-												const installment = calculateInstallmentPayment({
-													rate: interestRate60,
-													numberOfPeriods: term,
-													presentValue: totalInvestment60
-												})
-												return (
-													<div key={`${term}-${index}`} className="flex items-center justify-between p-3 rounded-lg bg-background border">
-														<span className="text-sm font-medium text-muted-foreground">{term} parcelas de</span>
-														<span className="font-bold text-lg">{formatCurrency(installment)}</span>
-													</div>
-												)
-											})}
-									</div>
-								</>
-							)}
+								<div className="flex justify-between text-muted-foreground">
+									<span>Gestão</span>
+									<span suppressHydrationWarning>{formattedManagementFee}</span>
+								</div>
+								<div className="flex justify-between text-muted-foreground">
+									<span>Contratação</span>
+									<span suppressHydrationWarning>{formattedServiceFee}</span>
+								</div>
+							</div>
 						</CardContent>
 					</Card>
 				</div>
 			</div>
 
-			<div className="flex justify-between pt-8">
+			{/* FOOTER */}
+			<div className="flex justify-between pt-8 border-t">
 				<Button type="button" variant="outline" onClick={onBack}>
-					<ArrowLeft className="mr-2 h-4 w-4" /> Voltar
+					<ArrowLeft className="mr-2 h-4 w-4" />
+					Voltar
 				</Button>
-				<Button type="button" onClick={onNext} disabled={form.formState.isSubmitting}>
-					Próximo <ArrowRight className="ml-2 h-4 w-4" />
+				<Button type="button" onClick={handlePrimaryAction} disabled={form.formState.isSubmitting}>
+					{isLastStep ? "Salvar Pedido" : "Próximo"}
+					<ArrowRight className="ml-2 h-4 w-4" />
 				</Button>
 			</div>
-		</form>
+		</div>
 	)
 }
-
-export { SimulationStep4 }

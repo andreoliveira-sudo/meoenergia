@@ -4,7 +4,7 @@ import { hasPermission } from "@/actions/auth"
 import { SellerTable } from "@/components/data-tables/sellers/seller-table"
 import { AddSellerDialog } from "@/components/dialogs/add-seller-dialog"
 
-const SellersPage = async () => {
+const SellersPage = async ({ searchParams }: { searchParams: Promise<{ dateFrom?: string; dateTo?: string }> }) => {
 	const canViewSellers = await hasPermission("sellers:view")
 
 	if (!canViewSellers) {
@@ -12,6 +12,7 @@ const SellersPage = async () => {
 	}
 
 	const canManageSellers = await hasPermission("sellers:manage")
+	const { dateFrom, dateTo } = (await searchParams) || {}
 
 	return (
 		<>
@@ -22,7 +23,7 @@ const SellersPage = async () => {
 				</div>
 				{canManageSellers && <AddSellerDialog />}
 			</div>
-			<SellerTable />
+			<SellerTable dateFrom={dateFrom} dateTo={dateTo} />
 		</>
 	)
 }

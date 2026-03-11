@@ -5,7 +5,7 @@ import { INVERTER_TYPE_ID, MODULE_TYPE_ID, OTHERS_TYPE_ID } from "@/lib/constant
 import PERMISSIONS from "@/lib/constants/permissions"
 import MONTSERRAT_BASE64 from "@/lib/constants/montserrat-base64"
 import MONTSERRAT_SEMIBOLD_BASE64 from "@/lib/constants/montserrat-semibold-base64"
-import documentFields from "@/lib/constants/document-fields"
+import { documentFields, documentFieldsPF, documentFieldsPJ } from "@/lib/constants/document-fields"
 
 type PermissionId = (typeof PERMISSIONS)[number]
 
@@ -20,5 +20,7 @@ export {
 	type PermissionId,
 	MONTSERRAT_BASE64,
 	MONTSERRAT_SEMIBOLD_BASE64,
-	documentFields
+	documentFields,
+	documentFieldsPF,
+	documentFieldsPJ
 }

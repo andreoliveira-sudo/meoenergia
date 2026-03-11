@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight, UserPlus } from "lucide-react"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
+import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 
 import { registerSeller } from "@/actions/sellers"
 import { Button } from "@/components/ui/button"
@@ -23,6 +24,7 @@ const RegisterSellerForm = ({ className }: { className?: string }) => {
 	const [step, setStep] = useState(1)
 	const [isFetchingCep, setIsFetchingCep] = useState(false)
 	const queryClient = useQueryClient()
+	const { execute } = useOperationFeedback()
 
 	const registerSellerForm = useForm<RegisterSellerData>({
 		resolver: zodResolver(registerSellerSchema),
@@ -97,20 +99,17 @@ const RegisterSellerForm = ({ className }: { className?: string }) => {
 	}
 
 	async function onSubmit(data: RegisterSellerData) {
-		const result = await registerSeller(data)
-
-		if (result.success) {
-			toast.success("Cadastro realizado com sucesso!", {
-				description: "O novo vendedor foi cadastrado."
-			})
-			queryClient.invalidateQueries({ queryKey: ["sellers"] })
-			reset()
-			setStep(1)
-		} else {
-			toast.error("Erro no cadastro", {
-				description: result.message
-			})
-		}
+		execute({
+			action: () => registerSeller(data),
+			loadingMessage: "Cadastrando vendedor...",
+			successMessage: "Cadastro realizado com sucesso!",
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: ["sellers"] })
+				queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] })
+				reset()
+				setStep(1)
+			}
+		})
 	}
 
 	const motionVariants = {

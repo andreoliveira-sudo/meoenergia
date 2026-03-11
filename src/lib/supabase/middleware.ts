@@ -71,7 +71,7 @@ async function updateSession(request: NextRequest) {
 
 			if (userData?.role === "partner") {
 				// Buscar status e is_active do parceiro
-				const { data: partner } = await supabase.from("partners").select("status, is_active").eq("user_id", user.id).single()
+				const { data: partner } = await supabase.from("partners").select("status, is_active").eq("user_id", user.id).is("deleted_at", null).single()
 
 				// Se parceiro não existe, não está aprovado, ou está inativo → bloquear acesso
 				if (!partner || partner.status !== "approved" || !partner.is_active) {
@@ -98,7 +98,7 @@ async function updateSession(request: NextRequest) {
 			const { data: userData } = await supabase.from("users").select("role").eq("id", user.id).single()
 
 			if (userData?.role === "partner") {
-				const { data: partner } = await supabase.from("partners").select("status, is_active").eq("user_id", user.id).single()
+				const { data: partner } = await supabase.from("partners").select("status, is_active").eq("user_id", user.id).is("deleted_at", null).single()
 
 				// Se parceiro aprovado e ativo tentando acessar awaiting-approval, redirecionar para dashboard
 				if (partner?.status === "approved" && partner?.is_active) {

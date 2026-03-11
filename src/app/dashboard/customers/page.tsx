@@ -4,12 +4,14 @@ import { hasPermission } from "@/actions/auth"
 import { CustomerTable } from "@/components/data-tables/customers/customer-table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
-const CustomersPage = async () => {
+const CustomersPage = async ({ searchParams }: { searchParams: Promise<{ type?: string; dateFrom?: string; dateTo?: string }> }) => {
 	const canViewCustomers = await hasPermission("simulations:view") // Usando uma permissão existente por enquanto
 
 	if (!canViewCustomers) {
 		redirect("/dashboard/home")
 	}
+
+	const { type, dateFrom, dateTo } = (await searchParams) || {}
 
 	return (
 		<div className="flex flex-col gap-8">
@@ -23,7 +25,7 @@ const CustomersPage = async () => {
 					<CardDescription>Lista de todos os clientes registrados no sistema, originados a partir de simulações.</CardDescription>
 				</CardHeader>
 				<CardContent>
-					<CustomerTable />
+					<CustomerTable filterType={type as "pf" | "pj" | undefined} dateFrom={dateFrom} dateTo={dateTo} />
 				</CardContent>
 			</Card>
 		</div>

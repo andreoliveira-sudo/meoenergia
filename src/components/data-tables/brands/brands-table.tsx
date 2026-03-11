@@ -30,7 +30,9 @@ const BrandsTable = () => {
 
 	const { data, isLoading } = useQuery<EquipmentBrand[]>({
 		queryKey: ["brands"],
-		queryFn: getAllBrands
+		queryFn: getAllBrands,
+		refetchInterval: 30_000,
+		refetchIntervalInBackground: false
 	})
 
 	const table = useReactTable({

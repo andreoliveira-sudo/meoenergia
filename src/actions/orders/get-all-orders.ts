@@ -1,120 +1,63 @@
 "use server"
 
+import { getCurrentUser } from "@/actions/auth"
 import type { OrderWithRelations } from "@/lib/definitions/orders"
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { mapOrderToRelation } from "./map-order-to-relation"
+import { ORDER_SELECT_QUERY } from "./order-query"
 
+/**
+ * Busca TODOS os pedidos do sistema.
+ * Usa createAdminClient() para bypassar RLS e garantir acesso completo.
+ * Faz fetch em lotes de 1000 para evitar o limite padrão do Supabase.
+ */
 async function getAllOrders(): Promise<OrderWithRelations[]> {
 	try {
-		const supabase = await createClient()
+		const user = await getCurrentUser()
 
-		const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-		if (authError || !user) {
-			console.error("Usuário não autenticado")
+		if (!user || !user.id || !user.role) {
+			console.error("Usuário não autenticado ou sem função definida.")
 			return []
 		}
 
-		// Buscar role do usuário
-		const { data: roleData } = await supabase
-			.from('users')
-			.select('role')
-			.eq('id', user.id)
-			.single()
+		const supabase = createAdminClient()
+		const isAdmin = user.role === "admin"
 
-		const isAdmin = roleData?.role === 'admin'
+		// Busca em lotes de 1000 para evitar truncamento silencioso do Supabase
+		const allData: any[] = []
+		const PAGE_SIZE = 1000
+		let from = 0
 
-		let query = supabase
-			.from("orders")
-			.select(
-				`
-        id,
-        kdi,
-        system_power,
-        equipment_value,
-        labor_value,
-        other_costs,
-        created_at,
-        status,
-				notes,
-				customers (
-					id,
-					name,
-					cnpj,
-					company_name,
-					city,
-					state,
-					type,
-					partners ( contact_name, legal_business_name )
-				),
-				sellers (
-					name
-				),
-				service_fee_60,
-				created_by:created_by_user_id ( name )
-			`
-			)
-			.order("created_at", { ascending: false })
+		while (true) {
+			let query = supabase
+				.from("orders")
+				.select(ORDER_SELECT_QUERY)
+				.is("deleted_at", null)
+				.order("created_at", { ascending: false })
+				.range(from, from + PAGE_SIZE - 1)
 
-		if (!isAdmin) {
-			query = query.eq('created_by_user_id', user.id)
-		}
-
-		const { data, error } = await query
-
-		if (error) {
-			console.error("Erro ao buscar pedidos com detalhes:", error)
-			return []
-		}
-
-		// Mapeia os dados para a estrutura final, incluindo o cálculo do valor total
-		const mappedData = data.map((order) => {
-			const customerData = order.customers
-			const customer = Array.isArray(customerData) ? customerData[0] : customerData
-
-			if (!customer) {
-				return null
+			if (!isAdmin) {
+				query = query.eq("created_by_user_id", user.id)
 			}
 
-			const subtotal = (order.equipment_value || 0) + (order.labor_value || 0) + (order.other_costs || 0)
-			const fee = order.service_fee_60 ?? 0
-			// total_value = subtotal + (subtotal * fee / 100) or similar logic?
-			// Previous logic: subtotal + subtotal * (order.service_fee_60 / 100)
-			const total_value = subtotal + subtotal * (fee / 100)
+			const { data, error } = await query
 
-			const partnerData = customer.partners
-			const partner = Array.isArray(partnerData) ? partnerData[0] : partnerData
-
-			const sellerData = order.sellers
-			const seller = Array.isArray(sellerData) ? sellerData[0] : sellerData
-
-			const creatorData = order.created_by
-			const creator = Array.isArray(creatorData) ? creatorData[0] : creatorData
-
-			// Lógica de fallback para Nome do Cliente (PJ vs PF)
-			const resolvedCustomerName = customer.company_name || customer.name || "N/A"
-
-			return {
-				id: order.id,
-				customerId: customer.id,
-				kdi: order.kdi,
-				cnpj: customer.cnpj || "N/A",
-				company_name: customer.company_name || "N/A",
-				customer_name: resolvedCustomerName,
-				customer_type: (customer as any).type || "pj",
-				city: customer.city || "N/A",
-				state: customer.state || "N/A",
-				partner_name: partner?.legal_business_name || "N/A",
-				internal_manager: seller?.name || null,
-				system_power: order.system_power,
-				total_value,
-				status: order.status,
-				created_at: order.created_at,
-				created_by_user: creator?.name || "N/A",
-				notes: order.notes
+			if (error) {
+				console.error("Erro ao buscar pedidos:", error)
+				return []
 			}
-		})
 
-		return mappedData.filter((d): d is OrderWithRelations => d !== null)
+			if (!data || data.length === 0) break
+
+			allData.push(...data)
+
+			if (data.length < PAGE_SIZE) break
+			from += PAGE_SIZE
+		}
+
+		return allData
+			.map(mapOrderToRelation)
+			.filter((d): d is OrderWithRelations => d !== null)
 	} catch (error) {
 		console.error("Erro inesperado em getAllOrders:", error)
 		return []

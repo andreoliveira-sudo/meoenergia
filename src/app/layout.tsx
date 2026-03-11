@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 
+import { OperationFeedbackProvider } from "@/components/feedback/operation-feedback"
 import { Toaster } from "@/components/ui/sonner"
 import { QueryProvider } from "@/providers/query-provider"
 
@@ -30,7 +31,9 @@ export default function RootLayout({
 		<html lang="pt-BR">
 			<body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
 				<QueryProvider>
-					{children}
+					<OperationFeedbackProvider>
+						{children}
+					</OperationFeedbackProvider>
 					<Toaster richColors />
 				</QueryProvider>
 			</body>

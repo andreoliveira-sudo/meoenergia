@@ -12,7 +12,7 @@ async function getPartnerByUserId(userId: string): Promise<ActionResponse<Partne
 	try {
 		const supabase = await createClient()
 
-		const { data: partner, error } = await supabase.from("partners").select("*").eq("user_id", userId).maybeSingle()
+		const { data: partner, error } = await supabase.from("partners").select("*").eq("user_id", userId).is("deleted_at", null).maybeSingle()
 
 		if (error) {
 			console.error("Erro ao buscar parceiro por User ID:", error)

@@ -52,6 +52,7 @@ async function getAllSimulations(): Promise<SimulationWithRelations[]> {
 				created_by:created_by_user_id ( name )
       `
 			)
+			.is("deleted_at", null)
 			.order("created_at", { ascending: false })
 
 		if (!isAdmin) {

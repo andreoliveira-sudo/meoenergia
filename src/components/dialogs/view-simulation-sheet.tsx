@@ -73,9 +73,7 @@ export function ViewSimulationSheet({ simulationId, open, onOpenChange }: ViewSi
 	} = useQuery({
 		queryKey: ["simulation-details", simulationId],
 		queryFn: () => getSimulationById(simulationId),
-		enabled: open,
-		staleTime: 5 * 60 * 1000,
-		refetchOnWindowFocus: false
+		enabled: open
 	})
 
 	const simulation = queryData?.success ? queryData.data : null

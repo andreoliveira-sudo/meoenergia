@@ -26,7 +26,7 @@ async function getSimulationsForCurrentUser(): Promise<SimulationWithRelations[]
 	}
 
 	if (user.role === "seller") {
-		const { data: seller, error: sellerError } = await supabase.from("sellers").select("id").eq("user_id", user.id).single()
+		const { data: seller, error: sellerError } = await supabase.from("sellers").select("id").eq("user_id", user.id).is("deleted_at", null).single()
 
 		if (sellerError || !seller) {
 			console.error("Vendedor não encontrado para o usuário atual:", sellerError)
@@ -34,7 +34,7 @@ async function getSimulationsForCurrentUser(): Promise<SimulationWithRelations[]
 		}
 
 		// SOLUÇÃO 1: Buscar primeiro os customer_ids do vendedor
-		const { data: customerIds, error: customerError } = await supabase.from("customers").select("id").eq("internal_manager", seller.id)
+		const { data: customerIds, error: customerError } = await supabase.from("customers").select("id").eq("internal_manager", seller.id).is("deleted_at", null)
 
 		if (customerError) {
 			console.error("Erro ao buscar clientes do vendedor:", customerError)
@@ -74,6 +74,7 @@ async function getSimulationsForCurrentUser(): Promise<SimulationWithRelations[]
 				created_by:created_by_user_id ( name )
 				`
 			)
+			.is("deleted_at", null)
 			.in("customer_id", customerIdArray) // Usar .in() com os IDs dos clientes
 			.order("created_at", { ascending: false })
 
@@ -113,7 +114,7 @@ async function getSimulationsForCurrentUser(): Promise<SimulationWithRelations[]
 	}
 
 	if (user.role === "partner") {
-		const { data: partner, error: partnerError } = await supabase.from("partners").select("id").eq("user_id", user.id).single()
+		const { data: partner, error: partnerError } = await supabase.from("partners").select("id").eq("user_id", user.id).is("deleted_at", null).single()
 
 		if (partnerError || !partner) {
 			console.error("Parceiro não encontrado para o usuário atual:", partnerError)
@@ -121,7 +122,7 @@ async function getSimulationsForCurrentUser(): Promise<SimulationWithRelations[]
 		}
 
 		// SOLUÇÃO 1: Buscar primeiro os customer_ids do parceiro
-		const { data: customerIds, error: customerError } = await supabase.from("customers").select("id").eq("partner_id", partner.id)
+		const { data: customerIds, error: customerError } = await supabase.from("customers").select("id").eq("partner_id", partner.id).is("deleted_at", null)
 
 		if (customerError) {
 			console.error("Erro ao buscar clientes do parceiro:", customerError)
@@ -161,6 +162,7 @@ async function getSimulationsForCurrentUser(): Promise<SimulationWithRelations[]
 				created_by:created_by_user_id ( name )
 				`
 			)
+			.is("deleted_at", null)
 			.in("customer_id", customerIdArray) // Usar .in() com os IDs dos clientes
 			.order("created_at", { ascending: false })
 

@@ -1,13 +1,13 @@
 "use server"
 
 import type { PartnerWithSellerName } from "@/lib/definitions/partners"
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 async function getAllPartners(): Promise<PartnerWithSellerName[]> {
 	try {
-		const supabase = await createClient()
+		const supabase = createAdminClient()
 
-		const { data: partners, error } = await supabase.from("partners").select("*, sellers(name)")
+		const { data: partners, error } = await supabase.from("partners").select("*, sellers(name)").is("deleted_at", null)
 
 		if (error) {
 			console.error("Erro na consulta:", error)

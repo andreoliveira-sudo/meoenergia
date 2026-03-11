@@ -42,50 +42,52 @@ const NavUser = ({
 			<SidebarMenuItem>
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
-						<SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
-							<div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-semibold">
+						<SidebarMenuButton
+							size="lg"
+							className="data-[state=open]:bg-white/10 data-[state=open]:text-white hover:!bg-white/5 rounded-xl transition-all"
+						>
+							<div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-meo-blue to-meo-blue-dark text-white font-semibold text-sm shadow-lg shadow-meo-blue/20">
 								{getInitials(user.name)}
 							</div>
 							<div className="grid flex-1 text-left text-sm leading-tight">
-								<span className="truncate font-medium">{user.name}</span>
-								<span className="truncate text-xs text-muted-foreground">{user.email}</span>
+								<span className="truncate font-medium text-white">{user.name}</span>
+								<span className="truncate text-xs text-white/50">{user.email}</span>
 							</div>
-							<ChevronsUpDown className="ml-auto size-4" />
+							<ChevronsUpDown className="ml-auto size-4 text-white/40" />
 						</SidebarMenuButton>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent
-						className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+						className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-xl shadow-xl"
 						side={isMobile ? "bottom" : "right"}
 						align="end"
 						sideOffset={4}
 					>
 						<DropdownMenuLabel className="p-0 font-normal">
-							<div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-								<div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-semibold">
+							<div className="flex items-center gap-2 px-2 py-2 text-left text-sm">
+								<div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-meo-blue to-meo-blue-dark text-white font-semibold text-sm">
 									{getInitials(user.name)}
 								</div>
-
 								<div className="grid flex-1 text-left text-sm leading-tight">
-									<span className="truncate font-medium">{user.name}</span>
+									<span className="truncate font-semibold">{user.name}</span>
 									<span className="truncate text-xs text-muted-foreground">{user.email}</span>
 								</div>
 							</div>
 						</DropdownMenuLabel>
 						<DropdownMenuSeparator />
 						<DropdownMenuGroup>
-							<DropdownMenuItem asChild>
+							<DropdownMenuItem asChild className="rounded-lg">
 								<Link href="/dashboard/my-account">
-									<BadgeCheck />
+									<BadgeCheck className="text-meo-blue" />
 									Minha conta
 								</Link>
 							</DropdownMenuItem>
-							<DropdownMenuItem>
-								<Bell />
-								Notificatições
+							<DropdownMenuItem className="rounded-lg">
+								<Bell className="text-meo-blue" />
+								Notificações
 							</DropdownMenuItem>
 						</DropdownMenuGroup>
 						<DropdownMenuSeparator />
-						<DropdownMenuItem className="text-destructive" onSelect={handleSignOut}>
+						<DropdownMenuItem className="text-destructive rounded-lg" onSelect={handleSignOut}>
 							<LogOut className="text-destructive" />
 							Sair
 						</DropdownMenuItem>

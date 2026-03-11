@@ -43,7 +43,7 @@ const SimulationStep1 = ({ onNext }: Step1Props) => {
 	return (
 		<form className="space-y-6">
 			<h3 className="text-lg font-medium">Passo 1: Dados do Projeto</h3>
-			<div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+			<div className="grid grid-cols-1 gap-6 md:grid-cols-3">
 				<FormField
 					control={form.control}
 					name="systemPower"
@@ -63,6 +63,20 @@ const SimulationStep1 = ({ onNext }: Step1Props) => {
 					render={({ field }) => (
 						<FormItem>
 							<FormLabel>Consumo Atual (kWh) *</FormLabel>
+							<FormControl>
+								<Input type="text" placeholder="9.999,99" {...field} onChange={(e) => field.onChange(maskNumber(e.target.value, 9))} />
+							</FormControl>
+							<FormMessage />
+						</FormItem>
+					)}
+				/>
+				{/* CAMPO MOVIDO DO STEP 4 */}
+				<FormField
+					control={form.control}
+					name="monthlyBillValue"
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel>Conta de Energia (R$)</FormLabel>
 							<FormControl>
 								<Input type="text" placeholder="9.999,99" {...field} onChange={(e) => field.onChange(maskNumber(e.target.value, 9))} />
 							</FormControl>

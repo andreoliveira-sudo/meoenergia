@@ -13,6 +13,8 @@ interface UpdateRateParams {
 
 async function updateSimulationRate({ rateId, value, simulationId }: UpdateRateParams): Promise<ActionResponse<null>> {
 	try {
+		console.log(`[UpdateRate] Starting update for simulation ${simulationId}. Field: ${rateId}, Value: ${value}`)
+
 		const supabase = createAdminClient()
 		const { error } = await supabase
 			.from("simulations")
@@ -20,15 +22,17 @@ async function updateSimulationRate({ rateId, value, simulationId }: UpdateRateP
 			.eq("id", simulationId)
 
 		if (error) {
-			console.error(`Error updating ${rateId}:`, error)
-			return { success: false, message: `Não foi possível atualizar a taxa "${rateId}".` }
+			console.error(`[UpdateRate] Error updating ${rateId} for simulation ${simulationId}:`, error)
+			return { success: false, message: `Erro ao atualizar taxa: ${error.message || error.details || "Erro desconhecido"}` }
 		}
+
+		console.log(`[UpdateRate] Success updating ${rateId} for simulation ${simulationId}`)
 
 		revalidatePath("/dashboard/admin/settings")
 		revalidatePath("/dashboard/simulations")
 		return { success: true, message: "Taxa atualizada com sucesso!", data: null }
 	} catch (e) {
-		console.error(`Unexpected error in updateSimulationRate for ${rateId}:`, e)
+		console.error(`[UpdateRate] Unexpected error in updateSimulationRate for ${rateId}:`, e)
 		return { success: false, message: "Ocorreu um erro inesperado." }
 	}
 }

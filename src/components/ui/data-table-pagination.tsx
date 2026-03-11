@@ -8,13 +8,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 interface DataTablePaginationProps<TData> {
 	table: Table<TData>
+	totalCount?: number
 }
 
-export const DataTablePagination = <TData,>({ table }: DataTablePaginationProps<TData>) => {
+export const DataTablePagination = <TData,>({ table, totalCount }: DataTablePaginationProps<TData>) => {
+	// Com manualPagination, getFilteredRowModel() retorna apenas a página atual
+	// Usar totalCount quando disponível para exibir o total real
+	const displayTotal = totalCount ?? table.getFilteredRowModel().rows.length
+
 	return (
 		<div className="flex flex-col items-center justify-between gap-4 px-2 md:flex-row">
 			<div className="text-sm text-muted-foreground">
-				{table.getFilteredSelectedRowModel().rows.length} de {table.getFilteredRowModel().rows.length} linha(s) selecionada(s).
+				{displayTotal} registro(s) encontrado(s).
 			</div>
 			<div className="flex items-center flex-wrap justify-center gap-x-6 gap-y-2 md:justify-end lg:gap-x-8">
 				<div className="flex items-center space-x-2">

@@ -52,6 +52,8 @@ export const RulesTable = ({ groupId }: RulesTableProps) => {
 			}))
 		},
 		enabled: Boolean(groupId),
+		refetchInterval: 30_000,
+		refetchIntervalInBackground: false,
 		retry: false
 	})
 

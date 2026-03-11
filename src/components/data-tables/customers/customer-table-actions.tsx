@@ -2,9 +2,9 @@
 
 import { Loader2, Pencil, Trash2 } from "lucide-react"
 import { useState, useTransition } from "react"
-import { toast } from "sonner"
 
 import { EditCustomerDialog } from "@/components/dialogs/edit-customer-dialog"
+import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import type { CustomerWithRelations } from "@/lib/definitions/customers"
@@ -14,23 +14,20 @@ import { deleteCustomer } from "@/actions/customers"
 export const CustomerTableActions = ({ customer }: { customer: CustomerWithRelations }) => {
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 	const [isDeletePending, startDeleteTransition] = useTransition()
-
 	const queryClient = useQueryClient()
+	const { execute } = useOperationFeedback()
 
 	function handleDelete() {
-		startDeleteTransition(async () => {
-			try {
-				const result = await deleteCustomer(customer.id)
-
-				if (result.success) {
-					queryClient.invalidateQueries({ queryKey: ["customers"] })
-					toast.success(result.message)
-				} else {
-					toast.error(result.message)
-				}
-			} catch (err) {
-				toast.error(err instanceof Error ? err.message : "Erro desconhecido")
+		startDeleteTransition(() => {
+			execute({
+				action: () => deleteCustomer(customer.id),
+				loadingMessage: "Deletando cliente...",
+				successMessage: (res) => res.message,
+				onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: ["customers"] })
+				queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] })
 			}
+			})
 		})
 	}
 
@@ -58,7 +55,7 @@ export const CustomerTableActions = ({ customer }: { customer: CustomerWithRelat
 				</Tooltip>
 			</div>
 
-			<EditCustomerDialog customerId={customer.id} open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} />
+			<EditCustomerDialog customerId={customer.id} customerType={customer.type} open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} />
 		</>
 	)
 }

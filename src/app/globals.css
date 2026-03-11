@@ -41,6 +41,18 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* MEO Energia Brand Colors */
+  --color-meo-navy: #0A1628;
+  --color-meo-dark: #0F1B2D;
+  --color-meo-blue: #0693E3;
+  --color-meo-blue-light: #3AAFE5;
+  --color-meo-blue-dark: #0570B0;
+  --color-meo-green: #39B54A;
+  --color-meo-green-light: #5DC96A;
+  --color-meo-cyan: #00D4AA;
+  --color-meo-gray: #32373C;
+  --color-meo-gray-light: #ABB8C3;
 }
 
 :root {
@@ -57,7 +69,7 @@
   --secondary: oklch(0.94 0.05 228.84);
   --secondary-foreground: oklch(0.34 0.087 265.75);
   --muted: oklch(0.96 0.02 222.62);
-  --muted-foreground: oklch(0.57 0.057 263.66);
+  --muted-foreground: oklch(0.45 0.04 260);
   --accent: oklch(0.94 0.05 228.84);
   --accent-foreground: oklch(0.34 0.087 265.75);
   --destructive: oklch(0.67 0.225 25.55);
@@ -70,14 +82,15 @@
   --chart-3: oklch(0.33 0.08 221.75);
   --chart-4: oklch(0.8 0.17 65.65);
   --chart-5: oklch(0.75 0.231 42.1);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
+  /* MEO Sidebar - Dark Navy Theme */
+  --sidebar: #0F1B2D;
+  --sidebar-foreground: #E2E8F0;
+  --sidebar-primary: #0693E3;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: rgba(6, 147, 227, 0.12);
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #0693E3;
 }
 
 .dark {
@@ -104,14 +117,15 @@
   --chart-3: oklch(0.75 0.207 48.42);
   --chart-4: oklch(0.71 0.184 298.54);
   --chart-5: oklch(0.68 0.211 12.18);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  /* MEO Sidebar - Dark Navy Theme (same in dark mode) */
+  --sidebar: #0A1628;
+  --sidebar-foreground: #E2E8F0;
+  --sidebar-primary: #3AAFE5;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: rgba(58, 175, 229, 0.15);
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar-ring: #3AAFE5;
 }
 
 @layer base {
@@ -213,4 +227,253 @@
 
 .alternative-buttons-no-trash button:nth-child(even) { /* pares */
    @apply bg-[#53565a] text-white
+}
+
+/* ========================================
+   MEO Login Page Styles
+   ======================================== */
+
+/* Gradient background for login hero */
+.meo-login-gradient {
+  background: linear-gradient(135deg, #0A1628 0%, #0F1B2D 30%, #0570B0 70%, #0693E3 100%);
+}
+
+/* Animated gradient orbs */
+@keyframes float-orb {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -30px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.95); }
+}
+
+@keyframes float-orb-reverse {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-25px, 25px) scale(1.05); }
+  66% { transform: translate(35px, -15px) scale(0.9); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes slide-up-fade {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.meo-orb-1 {
+  animation: float-orb 8s ease-in-out infinite;
+}
+
+.meo-orb-2 {
+  animation: float-orb-reverse 10s ease-in-out infinite;
+}
+
+.meo-orb-3 {
+  animation: float-orb 12s ease-in-out infinite 2s;
+}
+
+.meo-pulse {
+  animation: pulse-glow 4s ease-in-out infinite;
+}
+
+.meo-slide-up {
+  animation: slide-up-fade 0.6s ease-out forwards;
+}
+
+.meo-slide-up-delay-1 {
+  animation: slide-up-fade 0.6s ease-out 0.1s forwards;
+  opacity: 0;
+}
+
+.meo-slide-up-delay-2 {
+  animation: slide-up-fade 0.6s ease-out 0.2s forwards;
+  opacity: 0;
+}
+
+.meo-slide-up-delay-3 {
+  animation: slide-up-fade 0.6s ease-out 0.3s forwards;
+  opacity: 0;
+}
+
+/* Glass morphism card */
+.meo-glass {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.meo-glass-dark {
+  background: rgba(15, 27, 45, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Brand gradient button */
+.meo-btn-gradient {
+  background: linear-gradient(135deg, #0693E3 0%, #0570B0 50%, #39B54A 100%);
+  background-size: 200% 200%;
+  transition: all 0.3s ease;
+}
+
+.meo-btn-gradient:hover {
+  background-position: right center;
+  box-shadow: 0 8px 25px -5px rgba(6, 147, 227, 0.4);
+  transform: translateY(-1px);
+}
+
+.meo-btn-gradient:active {
+  transform: translateY(0);
+}
+
+/* Shimmer text effect */
+.meo-shimmer {
+  background: linear-gradient(90deg, #0693E3, #39B54A, #00D4AA, #0693E3);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s linear infinite;
+}
+
+/* Input focus glow */
+.meo-input-glow:focus-within {
+  box-shadow: 0 0 0 3px rgba(6, 147, 227, 0.15);
+  border-color: #0693E3;
+}
+
+/* Divider line with gradient */
+.meo-divider {
+  height: 3px;
+  background: linear-gradient(90deg, #0693E3, #39B54A);
+  border-radius: 2px;
+}
+
+/* Feature card hover */
+.meo-feature-card {
+  transition: all 0.3s ease;
+}
+
+.meo-feature-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px -5px rgba(6, 147, 227, 0.2);
+}
+
+/* ========================================
+   MEO Dashboard System Styles
+   ======================================== */
+
+/* Sidebar dark navy overrides */
+[data-sidebar="sidebar"] {
+  background: linear-gradient(180deg, #0F1B2D 0%, #0A1628 100%) !important;
+}
+
+[data-sidebar="menu-button"] {
+  border-radius: 0.75rem !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  margin: 1px 6px !important;
+}
+
+[data-sidebar="menu-button"][data-active="true"] {
+  background: linear-gradient(135deg, rgba(6, 147, 227, 0.25) 0%, rgba(58, 175, 229, 0.15) 50%, rgba(57, 181, 74, 0.1) 100%) !important;
+  border-left: 3px solid #0693E3;
+  border-radius: 0 0.75rem 0.75rem 0 !important;
+  box-shadow: 0 0 12px rgba(6, 147, 227, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  color: #FFFFFF !important;
+  font-weight: 500;
+}
+
+[data-sidebar="menu-button"][data-active="true"] svg {
+  color: #3AAFE5 !important;
+  filter: drop-shadow(0 0 4px rgba(6, 147, 227, 0.4));
+}
+
+[data-sidebar="menu-button"]:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  transform: translateX(2px);
+}
+
+[data-sidebar="menu-button"][data-active="true"]:hover {
+  background: linear-gradient(135deg, rgba(6, 147, 227, 0.3) 0%, rgba(58, 175, 229, 0.2) 50%, rgba(57, 181, 74, 0.15) 100%) !important;
+  box-shadow: 0 0 18px rgba(6, 147, 227, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transform: translateX(0);
+}
+
+/* Sub-menu item active state */
+[data-sidebar="menu-sub-button"][data-active="true"] {
+  color: #3AAFE5 !important;
+  font-weight: 500;
+  background: rgba(6, 147, 227, 0.08) !important;
+  border-radius: 0.5rem !important;
+}
+
+[data-sidebar="menu-sub-button"]:hover {
+  color: #3AAFE5 !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-radius: 0.5rem !important;
+}
+
+[data-sidebar="group-label"] {
+  color: #0693E3 !important;
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+[data-sidebar="menu-sub"] {
+  border-color: rgba(6, 147, 227, 0.2) !important;
+}
+
+/* Header topbar */
+.meo-header {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* Professional table styles */
+.meo-table-container {
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* Card refinement for dashboard */
+.meo-card {
+  border-radius: 0.75rem;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.meo-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Scrollbar styling for sidebar */
+[data-sidebar="content"]::-webkit-scrollbar {
+  width: 4px;
+}
+
+[data-sidebar="content"]::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-sidebar="content"]::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+[data-sidebar="content"]::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }

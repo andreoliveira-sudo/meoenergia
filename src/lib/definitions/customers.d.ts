@@ -20,4 +20,5 @@ export type CustomerWithRelations = {
 	internal_manager_name: string | null
 	city: string | null
 	state: string | null
+	created_at?: string | null
 }

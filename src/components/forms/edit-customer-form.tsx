@@ -4,9 +4,10 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { motion } from "framer-motion"
 import { ArrowLeft, ArrowRight, Loader2, Save } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
+import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 
 import { getCustomerById, updateCustomer } from "@/actions/customers"
 import { Button } from "@/components/ui/button"
@@ -49,9 +50,15 @@ function EditCustomerFormContent({
 	const [isFetchingCep, setIsFetchingCep] = useState(false)
 	const [customerType, setCustomerType] = useState<"pf" | "pj">(initialData.type || "pf")
 	const queryClient = useQueryClient()
+	const { execute, showError } = useOperationFeedback()
+	// Ref para manter customerType atualizado para o resolver dinâmico
+	const customerTypeRef = useRef(customerType)
+	customerTypeRef.current = customerType
 
 	const form = useForm<CustomerSchema>({
-		resolver: zodResolver(getCustomerSchema(customerType)),
+		resolver: async (values, context, options) => {
+return zodResolver(getCustomerSchema(customerTypeRef.current))(values, context, options)
+		},
 		defaultValues: {
 			...initialData,
 			type: customerType
@@ -126,19 +133,54 @@ function EditCustomerFormContent({
 		try {
 			// Parse final data safely
 			const parsedData = editCustomerSchema.parse(formData)
-			const result = await updateCustomer(customerId, parsedData)
-
-			if (result.success) {
-				toast.success(result.message)
-				queryClient.invalidateQueries({ queryKey: ["customers"] })
-				onFinished()
-			} else {
-				toast.error("Erro na atualização", { description: result.message })
-			}
+			execute({
+				action: () => updateCustomer(customerId, parsedData),
+				loadingMessage: "Salvando cliente...",
+				successMessage: (res) => res.message,
+				onSuccess: () => {
+					queryClient.invalidateQueries({ queryKey: ["customers"] })
+					onFinished()
+				}
+			})
 		} catch (error) {
 			console.error(error)
 			toast.error("Erro ao processar dados")
 		}
+	}
+
+	// Campos por step para navegar ao step correto quando validação falhar
+	const step1Fields = customerType === "pj"
+		? ["company_name", "cnpj", "ie", "incorporation_date", "annual_revenue", "type"]
+		: ["name", "cpf", "rg", "incorporation_date", "annual_revenue", "type"]
+	const step2Fields = ["contact_name", "contact_phone", "contact_email"]
+
+	function onInvalid(errors: any) {
+		const errorFields = Object.keys(errors)
+		const hasStep1Error = errorFields.some(f => step1Fields.includes(f))
+		const hasStep2Error = errorFields.some(f => step2Fields.includes(f))
+
+		const fieldLabels: Record<string, string> = {
+			name: "Nome Completo", cpf: "CPF", rg: "RG",
+			company_name: "Razão Social", cnpj: "CNPJ", ie: "Inscrição Estadual",
+			incorporation_date: customerType === "pj" ? "Data de Fundação" : "Data de Nascimento",
+			annual_revenue: "Faturamento/Renda",
+			contact_name: "Nome do Responsável", contact_phone: "Celular", contact_email: "Email",
+			postal_code: "CEP", street: "Rua", number: "Número",
+			neighborhood: "Bairro", city: "Cidade", state: "Estado"
+		}
+		const errorNames = errorFields.map(f => fieldLabels[f] || f).join(", ")
+
+		if (hasStep1Error) {
+			setStep(1)
+		} else if (hasStep2Error) {
+			setStep(2)
+		}
+
+		showError({
+			title: "Campos obrigatórios não preenchidos",
+			message: errorNames,
+			autoCloseDuration: 4000
+		})
 	}
 
 	const motionVariants = {
@@ -178,7 +220,7 @@ function EditCustomerFormContent({
 			</CardHeader>
 			<CardContent>
 				<Form {...form}>
-					<form onSubmit={handleSubmit(onSubmit)} onKeyDown={handleKeyDown} className="space-y-6">
+					<form onSubmit={handleSubmit(onSubmit, onInvalid)} onKeyDown={handleKeyDown} className="space-y-6">
 						<motion.div
 							key={step}
 							variants={motionVariants}
@@ -530,8 +572,6 @@ export function EditCustomerForm({ customerId, onFinished }: EditCustomerFormPro
 	} = useQuery({
 		queryKey: ["customer-details", customerId],
 		queryFn: () => getCustomerById(customerId),
-		staleTime: 5 * 60 * 1000,
-		refetchOnWindowFocus: false,
 		enabled: !!customerId
 	})
 
@@ -544,33 +584,32 @@ export function EditCustomerForm({ customerId, onFinished }: EditCustomerFormPro
 	const customer = queryData.data
 
 	// Mapeia dados do banco para o formato do form
-	// Infere tipo baseado na presença de CNPJ
-	const isPj = !!customer.cnpj
-	const initialType = isPj ? "pj" : "pf"
+	// Usa campo type do banco; fallback infere baseado na presença de CNPJ
+	const initialType = customer.type || (!!customer.cnpj ? "pj" : "pf")
 
 	const initialData = {
 		type: initialType,
 		// Comuns
-		contact_name: customer.contact_name,
-		contact_phone: maskPhone(customer.contact_phone),
-		contact_email: customer.contact_email,
-		postal_code: maskCep(customer.postal_code),
-		street: customer.street,
-		number: customer.number,
+		contact_name: customer.contact_name || "",
+		contact_phone: maskPhone(customer.contact_phone || ""),
+		contact_email: customer.contact_email || "",
+		postal_code: maskCep(customer.postal_code || ""),
+		street: customer.street || "",
+		number: customer.number || "",
 		complement: customer.complement || undefined,
-		neighborhood: customer.neighborhood,
-		city: customer.city,
-		state: customer.state,
+		neighborhood: customer.neighborhood || "",
+		city: customer.city || "",
+		state: customer.state || "",
 		annual_revenue: customer.annual_revenue ? maskNumber(customer.annual_revenue.toString(), 15) : undefined,
 		incorporation_date: customer.incorporation_date ? maskDate(customer.incorporation_date.split("-").reverse().join("")) : undefined,
-		// PJ
+		// PJ (null → undefined para evitar erro de validação do Zod)
 		cnpj: customer.cnpj ? maskCnpj(customer.cnpj) : undefined,
-		company_name: customer.company_name,
-		ie: undefined, // Campo que talvez não venha do banco ainda
-		// PF
-		cpf: undefined, // Se tivesse no banco, mapearia aqui
-		name: customer.company_name, // Usando company_name como nome para PF provisoriamente se não houver campo 'name' na tabela original
-		rg: undefined
+		company_name: customer.company_name || undefined,
+		ie: (customer as any).ie || undefined,
+		// PF (null → undefined para evitar erro de validação do Zod)
+		cpf: customer.cpf ? maskCpf(customer.cpf) : undefined,
+		name: customer.name || customer.company_name || undefined,
+		rg: (customer as any).rg || undefined
 	} as any
 
 	return <EditCustomerFormContent customerId={customerId} onFinished={onFinished} initialData={initialData} />

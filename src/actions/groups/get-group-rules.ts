@@ -36,6 +36,7 @@ export default async function getGroupRulesAction(groupId: string): Promise<Acti
 				`
 			)
 			.eq("group_id", groupId)
+			.is("deleted_at", null)
 			.order("created_at", { ascending: false })
 
 		if (error) {

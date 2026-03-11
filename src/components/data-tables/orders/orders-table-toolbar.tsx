@@ -1,130 +1,133 @@
 "use client"
 
-import type { Table } from "@tanstack/react-table"
 import { X } from "lucide-react"
 import { useMemo } from "react"
 
 import { Button } from "@/components/ui/button"
-import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter"
 import { Input } from "@/components/ui/input"
-import type { OrderWithRelations } from "@/lib/definitions/orders"
-
-interface OrdersTableToolbarProps<TData> {
-	table: Table<TData>
-}
+import { ServerFacetedFilter } from "@/components/ui/server-faceted-filter"
 
 const statusOptions = [
 	{ label: "Ag. Análise", value: "analysis_pending" },
-	{ label: "Análise Prévia", value: "pre_analysis" },
-	{ label: "Em Confirmação", value: "confirmation_pending" },
-	{ label: "Análise de Crédito", value: "credit_analysis" },
+	{ label: "Aprovado", value: "analysis_approved" },
+	{ label: "Reprovado", value: "analysis_rejected" },
 	{ label: "Ag. Documentos", value: "documents_pending" },
 	{ label: "Análise Docs", value: "docs_analysis" },
-	{ label: "Análise Final", value: "final_analysis" },
-	{ label: "Aprovado", value: "approved" },
-	{ label: "Reprovado", value: "rejected" },
-	{ label: "Assinatura Contrato", value: "contract_signing" },
-	{ label: "Finalizado", value: "completed" },
-	{ label: "Cancelado", value: "canceled" },
-	{ label: "Pré-Aprovado", value: "pre_approved" },
-	{ label: "Pré-Aprovado (Laranja)", value: "pre_approved_orange" },
-	{ label: "Congelado", value: "frozen" }
+	{ label: "Envio NF Distribuidora", value: "sending_distributor_invoice" },
+	{ label: "Pgto. Distribuidora", value: "payment_distributor" },
+	{ label: "Parecer de Acesso", value: "access_opinion" },
+	{ label: "Pagt inicial Integrador", value: "initial_payment_integrator" },
+	{ label: "Pagt Final Integrador", value: "final_payment_integrator" },
+	{ label: "Finalizado", value: "finished" },
+	{ label: "Cancelado", value: "canceled" }
 ]
 
-export const OrdersTableToolbar = <TData,>({ table }: OrdersTableToolbarProps<TData>) => {
-	const isFiltered = table.getState().columnFilters.length > 0
+interface OrdersTableToolbarProps {
+	searchFilter: string
+	onSearchChange: (value: string) => void
+	statusFilter: string[]
+	onStatusChange: (values: string[]) => void
+	stateFilter: string[]
+	onStateChange: (values: string[]) => void
+	cityFilter: string[]
+	onCityChange: (values: string[]) => void
+	partnerFilter: string[]
+	onPartnerChange: (values: string[]) => void
+	managerFilter: string[]
+	onManagerChange: (values: string[]) => void
+	creatorFilter: string[]
+	onCreatorChange: (values: string[]) => void
+	dateFromFilter: string
+	onDateFromChange: (value: string) => void
+	dateToFilter: string
+	onDateToChange: (value: string) => void
+	facets: {
+		states: string[]
+		cities: string[]
+		partners: string[]
+		managers: string[]
+		creators: string[]
+	}
+	hasActiveFilters: boolean
+	onClearFilters: () => void
+}
 
-	// Compute all unique filter values in a single pass using stable data reference
-	const { uniqueCities, uniqueStates, uniquePartners, uniqueManagers, uniqueCreators } = useMemo(() => {
-		const cities = new Set<string>()
-		const states = new Set<string>()
-		const partners = new Set<string>()
-		const managers = new Set<string>()
-		const creators = new Set<string>()
-
-		const data = table.options.data as OrderWithRelations[]
-		for (const order of data) {
-			if (order.city) cities.add(order.city)
-			if (order.state) states.add(order.state)
-			if (order.partner_name) partners.add(order.partner_name)
-			if (order.internal_manager) managers.add(order.internal_manager)
-			if (order.created_by_user) creators.add(order.created_by_user)
-		}
-
-		return {
-			uniqueCities: Array.from(cities).map((v) => ({ label: v, value: v })),
-			uniqueStates: Array.from(states).map((v) => ({ label: v, value: v })),
-			uniquePartners: Array.from(partners).map((v) => ({ label: v, value: v })),
-			uniqueManagers: Array.from(managers).map((v) => ({ label: v, value: v })),
-			uniqueCreators: Array.from(creators).map((v) => ({ label: v, value: v }))
-		}
-	}, [table.options.data])
-
-	const createdAtFilter = (table.getColumn("created_at")?.getFilterValue() as { from?: string; to?: string }) ?? {}
+export const OrdersTableToolbar = ({
+	searchFilter,
+	onSearchChange,
+	statusFilter,
+	onStatusChange,
+	stateFilter,
+	onStateChange,
+	cityFilter,
+	onCityChange,
+	partnerFilter,
+	onPartnerChange,
+	managerFilter,
+	onManagerChange,
+	creatorFilter,
+	onCreatorChange,
+	dateFromFilter,
+	onDateFromChange,
+	dateToFilter,
+	onDateToChange,
+	facets,
+	hasActiveFilters,
+	onClearFilters
+}: OrdersTableToolbarProps) => {
+	const stateOptions = useMemo(() => facets.states.map((v) => ({ label: v, value: v })), [facets.states])
+	const cityOptions = useMemo(() => facets.cities.map((v) => ({ label: v, value: v })), [facets.cities])
+	const partnerOptions = useMemo(() => facets.partners.map((v) => ({ label: v, value: v })), [facets.partners])
+	const managerOptions = useMemo(() => facets.managers.map((v) => ({ label: v, value: v })), [facets.managers])
+	const creatorOptions = useMemo(() => facets.creators.map((v) => ({ label: v, value: v })), [facets.creators])
 
 	return (
 		<div className="flex items-center justify-between">
 			<div className="flex flex-1 flex-wrap items-center gap-2">
 				<Input
 					placeholder="Filtrar por Cliente..."
-					value={(table.getColumn("customer_name")?.getFilterValue() as string) ?? ""}
-					onChange={(event) => table.getColumn("customer_name")?.setFilterValue(event.target.value)}
+					value={searchFilter}
+					onChange={(e) => onSearchChange(e.target.value)}
 					className="h-8 w-[150px] lg:w-[250px]"
 				/>
 
 				{/* Estado */}
-				{table.getColumn("state") && <DataTableFacetedFilter column={table.getColumn("state")} title="Estado" options={uniqueStates} />}
+				<ServerFacetedFilter title="Estado" selectedValues={stateFilter} onChange={onStateChange} options={stateOptions} />
 
 				{/* Cidade */}
-				{table.getColumn("city") && <DataTableFacetedFilter column={table.getColumn("city")} title="Cidade" options={uniqueCities} />}
+				<ServerFacetedFilter title="Cidade" selectedValues={cityFilter} onChange={onCityChange} options={cityOptions} />
 
 				{/* Parceiro */}
-				{table.getColumn("partner_name") && <DataTableFacetedFilter column={table.getColumn("partner_name")} title="Parceiro" options={uniquePartners} />}
+				<ServerFacetedFilter title="Parceiro" selectedValues={partnerFilter} onChange={onPartnerChange} options={partnerOptions} />
 
 				{/* Gestor Interno */}
-				{table.getColumn("internal_manager") && (
-					<DataTableFacetedFilter column={table.getColumn("internal_manager")} title="Gestor Interno" options={uniqueManagers} />
-				)}
+				<ServerFacetedFilter title="Gestor Interno" selectedValues={managerFilter} onChange={onManagerChange} options={managerOptions} />
 
 				{/* Status */}
-				{table.getColumn("status") && <DataTableFacetedFilter column={table.getColumn("status")} title="Status" options={statusOptions} />}
+				<ServerFacetedFilter title="Status" selectedValues={statusFilter} onChange={onStatusChange} options={statusOptions} />
 
 				{/* Criado por */}
-				{table.getColumn("created_by_user") && (
-					<DataTableFacetedFilter column={table.getColumn("created_by_user")} title="Criado por" options={uniqueCreators} />
-				)}
+				<ServerFacetedFilter title="Criado por" selectedValues={creatorFilter} onChange={onCreatorChange} options={creatorOptions} />
 
-				{/* Intervalo de datas (created_at) */}
-				{table.getColumn("created_at") && (
-					<div className="flex items-center gap-2">
-						<Input
-							type="date"
-							className="h-8 w-[140px]"
-							value={createdAtFilter.from ?? ""}
-							onChange={(e) =>
-								table.getColumn("created_at")?.setFilterValue({
-									...createdAtFilter,
-									from: e.target.value || undefined
-								})
-							}
-						/>
-						<span className="text-xs text-muted-foreground">até</span>
-						<Input
-							type="date"
-							className="h-8 w-[140px]"
-							value={createdAtFilter.to ?? ""}
-							onChange={(e) =>
-								table.getColumn("created_at")?.setFilterValue({
-									...createdAtFilter,
-									to: e.target.value || undefined
-								})
-							}
-						/>
-					</div>
-				)}
+				{/* Intervalo de datas */}
+				<div className="flex items-center gap-2">
+					<Input
+						type="date"
+						className="h-8 w-[140px]"
+						value={dateFromFilter}
+						onChange={(e) => onDateFromChange(e.target.value)}
+					/>
+					<span className="text-xs text-muted-foreground">até</span>
+					<Input
+						type="date"
+						className="h-8 w-[140px]"
+						value={dateToFilter}
+						onChange={(e) => onDateToChange(e.target.value)}
+					/>
+				</div>
 
-				{isFiltered && (
-					<Button variant="ghost" onClick={() => table.resetColumnFilters()} className="h-8 px-2 lg:px-3">
+				{hasActiveFilters && (
+					<Button variant="ghost" onClick={onClearFilters} className="h-8 px-2 lg:px-3">
 						Limpar
 						<X className="ml-2 h-4 w-4" />
 					</Button>

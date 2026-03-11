@@ -2,9 +2,8 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Loader2, Trash2 } from "lucide-react"
-import { toast } from "sonner"
-
 import { removeGroupMemberAction } from "@/actions/groups"
+import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 import { Button } from "@/components/ui/button"
 
 import type { GroupMemberRow } from "./types"
@@ -15,21 +14,16 @@ interface MembersTableActionsProps {
 
 export const MembersTableActions = ({ member }: MembersTableActionsProps) => {
 	const queryClient = useQueryClient()
+	const { execute } = useOperationFeedback()
 
 	const mutation = useMutation({
-		mutationFn: () => removeGroupMemberAction({ groupId: member.groupId, userId: member.user_id }),
-		onSuccess: (result) => {
-			if (result.success) {
-				toast.success(result.message)
-				queryClient.invalidateQueries({ queryKey: ["group-members", member.groupId] })
-			} else {
-				toast.error(result.message)
-			}
-		},
-		onError: (error) => {
-			const message = error instanceof Error ? error.message : "Erro ao remover membro"
-			toast.error(message)
-		}
+		mutationFn: () =>
+			execute({
+				action: () => removeGroupMemberAction({ groupId: member.groupId, userId: member.user_id }),
+				loadingMessage: "Removendo membro...",
+				successMessage: (res) => res.message,
+				onSuccess: () => queryClient.invalidateQueries({ queryKey: ["group-members", member.groupId] })
+			})
 	})
 
 	return (

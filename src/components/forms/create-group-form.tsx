@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { Loader2, Save } from "lucide-react"
 import { useTransition } from "react"
 import { useForm } from "react-hook-form"
-import { toast } from "sonner"
+import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 
 import { createGroupAction } from "@/actions/groups"
 import { Button } from "@/components/ui/button"
@@ -21,6 +21,7 @@ interface CreateGroupFormProps {
 export const CreateGroupForm = ({ onSuccess }: CreateGroupFormProps) => {
 	const [isPending, startTransition] = useTransition()
 	const queryClient = useQueryClient()
+	const { execute } = useOperationFeedback()
 
 	const form = useForm<CreateGroupSchema>({
 		resolver: zodResolver(createGroupSchema),
@@ -31,24 +32,20 @@ export const CreateGroupForm = ({ onSuccess }: CreateGroupFormProps) => {
 	})
 
 	const handleSubmit = (data: CreateGroupSchema) => {
-		startTransition(async () => {
-			const result = await createGroupAction({
+		execute({
+			action: () => createGroupAction({
 				name: data.name,
 				description: data.description?.trim() ? data.description : undefined
-			})
-
-			if (result.success) {
-				toast.success(result.message)
+			}),
+			loadingMessage: "Criando grupo...",
+			successMessage: (res) => res.message,
+			onSuccess: () => {
 				queryClient.invalidateQueries({ queryKey: ["groups"] })
 				form.reset({
 					name: "",
 					description: ""
 				})
 				onSuccess?.()
-			} else {
-				toast.error("Erro ao criar grupo", {
-					description: result.message
-				})
 			}
 		})
 	}

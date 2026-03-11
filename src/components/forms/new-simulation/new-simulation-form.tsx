@@ -3,6 +3,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { AnimatePresence, motion } from "framer-motion"
+import { useSearchParams } from "next/navigation"
 import * as React from "react"
 import { FormProvider, useForm } from "react-hook-form"
 import { toast } from "sonner"
@@ -19,6 +20,7 @@ import { SimulationStep5 } from "./step-5-documents"
 import {
 	newSimulationSchema,
 	type SimulationData,
+	type SimulationInput,
 	simulationStep1Schema,
 	simulationStep2Schema,
 	simulationStep3Schema,
@@ -34,7 +36,7 @@ const STEPS_CONFIG = [
 	{ id: 5, name: "Documentos", schema: simulationStep5Schema }
 ]
 
-type ExtendedSimulationData = SimulationData & {
+type ExtendedSimulationData = SimulationInput & {
 	kit_module_brand_id?: string
 	kit_inverter_brand_id?: string
 	kit_others_brand_id?: string
@@ -86,11 +88,14 @@ export function NewSimulationForm({
 	const [createOrderFromSimulation, setCreateOrderFromSimulation] = React.useState<boolean>(true)
 	const { partnerId, sellerId, clearContext } = useSimulation()
 
+	const searchParams = useSearchParams()
+	const urlType = searchParams.get("type") as "pf" | "pj" | null
+
 	const form = useForm<ExtendedSimulationData>({
-		resolver: zodResolver(newSimulationSchema),
+		resolver: zodResolver(newSimulationSchema) as any,
 		defaultValues: {
 			systemPower: "",
-			type: "pj",
+			type: urlType || "pj",
 			currentConsumption: "",
 			energyProvider: "",
 			structureType: "",
@@ -132,9 +137,15 @@ export function NewSimulationForm({
 			contratoSocial: undefined,
 			proposta: undefined,
 			...initialData
-		},
+		} as any,
 		mode: "onChange"
 	})
+
+	React.useEffect(() => {
+		if (urlType) {
+			form.setValue("type", urlType)
+		}
+	}, [urlType, form])
 
 	const validateCurrentStep = async (step: number): Promise<boolean> => {
 		const stepSchema = STEPS_CONFIG[step - 1]?.schema

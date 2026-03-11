@@ -4,7 +4,12 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import type { ActionResponse } from "@/types/action-response"
 
 async function getRateUniqueFromSimulationId(
-	rateId: "service_fee_36" | "service_fee_48" | "service_fee_60" | "interest_rate_36" | "interest_rate_48" | "interest_rate_60",
+	rateId:| 'service_fee_36'
+  | 'service_fee_48' 
+  | 'service_fee_60'
+  | 'interest_rate_36'
+  | 'interest_rate_48'
+  | 'interest_rate_60',
 	simulationId: string
 ): Promise<ActionResponse<number>> {
 	try {

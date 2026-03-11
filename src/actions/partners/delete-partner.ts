@@ -1,6 +1,6 @@
 "use server"
 
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import type { ActionResponse } from "@/types/action-response"
 
 interface DeletePartnerParams {
@@ -10,34 +10,35 @@ interface DeletePartnerParams {
 
 async function deletePartner({ partnerId, userId }: DeletePartnerParams): Promise<ActionResponse<{ partnerId: string }>> {
 	if (!partnerId) {
-		return { success: false, message: "ID do cliente não fornecido." }
+		return { success: false, message: "ID do parceiro não fornecido." }
 	}
 
 	try {
-		const supabase = await createClient()
+		const supabase = createAdminClient()
 
-		const { error } = await supabase.from("partners").delete().eq("id", partnerId)
+		// Soft delete do parceiro
+		const { error } = await supabase
+			.from("partners")
+			.update({ deleted_at: new Date().toISOString() })
+			.eq("id", partnerId)
+			.is("deleted_at", null)
 
 		if (error) {
 			console.error("Erro ao deletar partner (Supabase):", error)
-
-			if (error.code === "23503") {
-				// Foreign key violation
-				return {
-					success: false,
-					message: "Não é possível deletar este parceiro, pois ele está associado a algum cliente."
-				}
-			}
-
 			return {
 				success: false,
 				message: "Erro ao deletar o parceiro. Por favor, tente novamente."
 			}
 		}
 
-		const { error: rpcError } = await supabase.rpc("delete_user_with_auth", { target_user_id: userId })
-		if (rpcError) {
-			throw rpcError
+		// Desativar o usuário no Auth (não deletar)
+		if (userId) {
+			const { error: authError } = await supabase.auth.admin.updateUserById(userId, {
+				ban_duration: "876600h"
+			})
+			if (authError) {
+				console.error("Erro ao desativar usuário do parceiro:", authError)
+			}
 		}
 
 		return {

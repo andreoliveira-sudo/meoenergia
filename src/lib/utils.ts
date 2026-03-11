@@ -49,3 +49,41 @@ export function formatCurrency(value: number): string {
 		currency: 'BRL',
 	}).format(value)
 }
+
+export function isValidCpf(cpf: string): boolean {
+	if (typeof cpf !== "string") return false
+	cpf = cpf.replace(/[^\d]+/g, "")
+	if (cpf.length !== 11 || !!cpf.match(/(\d)\1{10}/)) return false
+	const values = cpf.split("").map(el => +el)
+	const rest = (count: number) => (values.slice(0, count - 12)
+		.reduce((soma, el, index) => (soma + el * (count - index)), 0) * 10) % 11 % 10
+	return rest(10) === values[9] && rest(11) === values[10]
+}
+
+export function isValidCnpj(cnpj: string): boolean {
+	if (!cnpj) return false
+	cnpj = cnpj.replace(/[^\d]+/g, "")
+	if (cnpj.length !== 14) return false
+	let size = cnpj.length - 2
+	let numbers = cnpj.substring(0, size)
+	const digits = cnpj.substring(size)
+	let sum = 0
+	let pos = size - 7
+	for (let i = size; i >= 1; i--) {
+		sum += parseInt(numbers.charAt(size - i)) * pos--
+		if (pos < 2) pos = 9
+	}
+	let result = sum % 11 < 2 ? 0 : 11 - (sum % 11)
+	if (result !== parseInt(digits.charAt(0))) return false
+	size = size + 1
+	numbers = cnpj.substring(0, size)
+	sum = 0
+	pos = size - 7
+	for (let i = size; i >= 1; i--) {
+		sum += parseInt(numbers.charAt(size - i)) * pos--
+		if (pos < 2) pos = 9
+	}
+	result = sum % 11 < 2 ? 0 : 11 - (sum % 11)
+	if (result !== parseInt(digits.charAt(1))) return false
+	return true
+}

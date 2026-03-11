@@ -5,9 +5,9 @@ import { useQueryClient } from "@tanstack/react-query"
 import { Loader2, Save } from "lucide-react"
 import { useTransition } from "react"
 import { useForm } from "react-hook-form"
-import { toast } from "sonner"
 
 import { createBrand } from "@/actions/equipments"
+import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
@@ -20,6 +20,7 @@ interface AddBrandFormProps {
 const AddBrandForm = ({ onSuccess }: AddBrandFormProps) => {
 	const [isPending, startTransition] = useTransition()
 	const queryClient = useQueryClient()
+	const { execute } = useOperationFeedback()
 
 	const form = useForm<AddBrandData>({
 		resolver: zodResolver(addBrandSchema),
@@ -29,21 +30,17 @@ const AddBrandForm = ({ onSuccess }: AddBrandFormProps) => {
 	})
 
 	const onSubmit = (data: AddBrandData) => {
-		startTransition(async () => {
-			const result = await createBrand(data.name)
-
-			if (result.success) {
-				toast.success(result.message)
-				queryClient.invalidateQueries({ queryKey: ["brands"] })
-				form.reset()
-				if (onSuccess) {
-					onSuccess()
+		startTransition(() => {
+			execute({
+				action: () => createBrand(data.name),
+				loadingMessage: "Salvando marca...",
+				successMessage: (res) => res.message,
+				onSuccess: () => {
+					queryClient.invalidateQueries({ queryKey: ["brands"] })
+					form.reset()
+					onSuccess?.()
 				}
-			} else {
-				toast.error("Erro ao adicionar", {
-					description: result.message
-				})
-			}
+			})
 		})
 	}
 

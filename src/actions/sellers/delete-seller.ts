@@ -1,6 +1,6 @@
 "use server"
 
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import type { ActionResponse } from "@/types/action-response"
 
 interface DeleteSellerParams {
@@ -14,30 +14,31 @@ async function deleteSeller({ sellerId, userId }: DeleteSellerParams): Promise<A
 	}
 
 	try {
-		const supabase = await createClient()
+		const supabase = createAdminClient()
 
-		const { error } = await supabase.from("sellers").delete().eq("id", sellerId)
+		// Soft delete do vendedor
+		const { error } = await supabase
+			.from("sellers")
+			.update({ deleted_at: new Date().toISOString() })
+			.eq("id", sellerId)
+			.is("deleted_at", null)
 
 		if (error) {
 			console.error("Erro ao deletar seller (Supabase):", error)
-
-			if (error.code === "23503") {
-				// Foreign key violation
-				return {
-					success: false,
-					message: "Não é possível deletar este vendedor, pois ele está associado a algum cliente."
-				}
-			}
-
 			return {
 				success: false,
 				message: "Erro ao deletar o vendedor. Por favor, tente novamente."
 			}
 		}
 
-		const { error: rpcError } = await supabase.rpc("delete_user_with_auth", { target_user_id: userId })
-		if (rpcError) {
-			throw rpcError
+		// Desativar o usuário no Auth (não deletar)
+		if (userId) {
+			const { error: authError } = await supabase.auth.admin.updateUserById(userId, {
+				ban_duration: "876600h"
+			})
+			if (authError) {
+				console.error("Erro ao desativar usuário do vendedor:", authError)
+			}
 		}
 
 		return {

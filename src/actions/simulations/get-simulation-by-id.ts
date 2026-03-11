@@ -34,6 +34,7 @@ async function getSimulationById(simulationId: string): Promise<ActionResponse<F
       `
 			)
 			.eq("id", simulationId)
+			.is("deleted_at", null)
 			.single()
 
 		if (error?.code === "PGRST116") {

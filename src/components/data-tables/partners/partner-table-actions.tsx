@@ -3,11 +3,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { CheckCircle, Eye, Loader2, MoreHorizontal, Pencil, ToggleLeft, ToggleRight, Trash2, XCircle } from "lucide-react"
 import { useState, useTransition } from "react"
-import { toast } from "sonner"
-
 import { approvePartner, deletePartner, rejectPartner, setPartnerActiveStatus } from "@/actions/partners"
 import { ApprovePartnerDialog } from "@/components/dialogs/approve-partner-dialog"
 import { EditPartnerDialog } from "@/components/dialogs/edit-partner-dialog"
+import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
@@ -31,6 +30,7 @@ const PartnerActions = ({ partner }: { partner: Partner }) => {
 	const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false)
 	const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
 	const [isDeletePending, startDeleteTransition] = useTransition()
+	const { execute } = useOperationFeedback()
 
 	const { data: canManage } = useQuery({
 		queryKey: ["permission", "partners:manage"],
@@ -38,43 +38,38 @@ const PartnerActions = ({ partner }: { partner: Partner }) => {
 	})
 
 	function handleReject() {
-		startTransition(async () => {
-			const result = await rejectPartner(partner.id)
-			if (result.success) {
-				toast.success(result.message)
+		startTransition(() => {
+			execute({
+				action: () => rejectPartner(partner.id),
+				loadingMessage: "Rejeitando parceiro...",
+				successMessage: (res) => res.message,
+				onSuccess: () => {
 				queryClient.invalidateQueries({ queryKey: ["partners"] })
-			} else {
-				toast.error(result.message)
+				queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] })
 			}
+			})
 		})
 	}
 
 	function handleToggleActive(isActive: boolean) {
-		startTransition(async () => {
-			const result = await setPartnerActiveStatus({ partnerId: partner.id, isActive })
-			if (result.success) {
-				toast.success(result.message)
-				queryClient.invalidateQueries({ queryKey: ["partners"] })
-			} else {
-				toast.error(result.message)
-			}
+		startTransition(() => {
+			execute({
+				action: () => setPartnerActiveStatus({ partnerId: partner.id, isActive }),
+				loadingMessage: isActive ? "Reativando parceiro..." : "Inativando parceiro...",
+				successMessage: (res) => res.message,
+				onSuccess: () => queryClient.invalidateQueries({ queryKey: ["partners"] })
+			})
 		})
 	}
 
 	function handleDelete() {
-		startDeleteTransition(async () => {
-			try {
-				const result = await deletePartner({ partnerId: partner.id, userId: partner.user_id })
-
-				if (result.success) {
-					queryClient.invalidateQueries({ queryKey: ["partners"] })
-					toast.success(result.message)
-				} else {
-					toast.error(result.message)
-				}
-			} catch (err) {
-				toast.error(err instanceof Error ? err.message : "Erro desconhecido")
-			}
+		startDeleteTransition(() => {
+			execute({
+				action: () => deletePartner({ partnerId: partner.id, userId: partner.user_id }),
+				loadingMessage: "Deletando parceiro...",
+				successMessage: (res) => res.message,
+				onSuccess: () => queryClient.invalidateQueries({ queryKey: ["partners"] })
+			})
 		})
 	}
 

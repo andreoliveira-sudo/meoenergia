@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { Loader2, Save } from "lucide-react"
 import { useTransition } from "react"
 import { useForm } from "react-hook-form"
-import { toast } from "sonner"
+import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 
 import { updateBrand } from "@/actions/equipments"
 import { Button } from "@/components/ui/button"
@@ -22,6 +22,7 @@ interface EditBrandFormProps {
 export const EditBrandForm = ({ brand, onSuccess }: EditBrandFormProps) => {
 	const [isPending, startTransition] = useTransition()
 	const queryClient = useQueryClient()
+	const { execute } = useOperationFeedback()
 
 	const form = useForm<AddBrandData>({
 		resolver: zodResolver(addBrandSchema),
@@ -31,18 +32,14 @@ export const EditBrandForm = ({ brand, onSuccess }: EditBrandFormProps) => {
 	})
 
 	const onSubmit = (data: AddBrandData) => {
-		startTransition(async () => {
-			const result = await updateBrand({ brandId: brand.id, data })
-
-			if (result.success) {
-				toast.success(result.message)
+		execute({
+			action: () => updateBrand({ brandId: brand.id, data }),
+			loadingMessage: "Salvando marca...",
+			successMessage: (res) => res.message,
+			onSuccess: () => {
 				queryClient.invalidateQueries({ queryKey: ["brands"] })
 				form.reset()
 				onSuccess?.()
-			} else {
-				toast.error("Erro ao atualizar", {
-					description: result.message
-				})
 			}
 		})
 	}

@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Loader2, Save } from "lucide-react"
 import * as React from "react"
 import { useForm } from "react-hook-form"
-import { toast } from "sonner"
+import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 
 import { updateEquipment, getAllBrands, getEquipmentTypes } from "@/actions/equipments"
 import { Button } from "@/components/ui/button"
@@ -25,6 +25,7 @@ interface EditEquipmentFormProps {
 export function EditEquipmentForm({ equipment, onSuccess }: EditEquipmentFormProps) {
 	const [isPending, startTransition] = React.useTransition()
 	const queryClient = useQueryClient()
+	const { execute } = useOperationFeedback()
 
 	const form = useForm<AddEquipmentData>({
 		resolver: zodResolver(addEquipmentSchema),
@@ -55,18 +56,14 @@ export function EditEquipmentForm({ equipment, onSuccess }: EditEquipmentFormPro
 	})
 
 	const onSubmit = (data: AddEquipmentData) => {
-		startTransition(async () => {
-			const result = await updateEquipment({ equipmentId: equipment.id, data })
-
-			if (result.success) {
-				toast.success(result.message)
+		execute({
+			action: () => updateEquipment({ equipmentId: equipment.id, data }),
+			loadingMessage: "Salvando equipamento...",
+			successMessage: (res) => res.message,
+			onSuccess: () => {
 				queryClient.invalidateQueries({ queryKey: ["equipments"] })
 				form.reset()
 				onSuccess?.()
-			} else {
-				toast.error("Erro ao atualizar", {
-					description: result.message
-				})
 			}
 		})
 	}

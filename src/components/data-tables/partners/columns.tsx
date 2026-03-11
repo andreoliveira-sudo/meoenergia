@@ -53,14 +53,14 @@ export const columns: ColumnDef<PartnerWithSellerName>[] = [
 			)
 		},
 		cell: ({ row }) => {
-			const fullName = row.getValue("legal_business_name") as string
+			const fullName = (row.getValue("legal_business_name") as string) || ""
 			return (
 				<Tooltip>
 					<TooltipTrigger asChild>
-						<div className="font-medium text-left cursor-pointer">{getFirstAndLastName(fullName)}</div>
+						<div className="font-medium text-left cursor-pointer">{getFirstAndLastName(fullName).toUpperCase()}</div>
 					</TooltipTrigger>
 					<TooltipContent>
-						<p>{fullName}</p>
+						<p>{fullName.toUpperCase()}</p>
 					</TooltipContent>
 				</Tooltip>
 			)
@@ -75,14 +75,14 @@ export const columns: ColumnDef<PartnerWithSellerName>[] = [
 		accessorKey: "contact_name",
 		header: "Responsável",
 		cell: ({ row }) => {
-			const fullName = row.getValue("contact_name") as string
+			const fullName = (row.getValue("contact_name") as string) || ""
 			return (
 				<Tooltip>
 					<TooltipTrigger asChild>
-						<div className="text-left cursor-pointer">{getFirstAndLastName(fullName)}</div>
+						<div className="text-left cursor-pointer">{getFirstAndLastName(fullName).toUpperCase()}</div>
 					</TooltipTrigger>
 					<TooltipContent>
-						<p>{fullName}</p>
+						<p>{fullName.toUpperCase()}</p>
 					</TooltipContent>
 				</Tooltip>
 			)

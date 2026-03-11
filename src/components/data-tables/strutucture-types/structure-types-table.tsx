@@ -30,7 +30,9 @@ const StructureTypesTable = () => {
 
 	const { data, isLoading } = useQuery<StructureType[]>({
 		queryKey: ["structure-types"],
-		queryFn: getStructureTypes
+		queryFn: getStructureTypes,
+		refetchInterval: 30_000,
+		refetchIntervalInBackground: false
 	})
 
 	const table = useReactTable({

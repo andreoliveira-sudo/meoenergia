@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/actions/auth"
 import { getSellerByUserId } from "@/actions/sellers"
 import type { PartnerWithSellerName } from "@/lib/definitions/partners"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { getAllPartners } from "."
+import getAllPartners from "@/actions/partners/get-all-partners"
 
 /**
  * Busca parceiros com base na função do usuário logado.
@@ -36,7 +36,7 @@ async function getPartnersForCurrentUser(): Promise<PartnerWithSellerName[]> {
 			}
 			const sellerId = sellerResponse.data.id
 
-			const { data: partners, error } = await supabase.from("partners").select("*, sellers(name)").eq("seller_id", sellerId)
+			const { data: partners, error } = await supabase.from("partners").select("*, sellers(name)").is("deleted_at", null).eq("seller_id", sellerId)
 
 			if (error) {
 				console.error("Erro ao buscar parceiros do vendedor:", error)

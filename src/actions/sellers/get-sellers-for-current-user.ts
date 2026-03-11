@@ -2,7 +2,7 @@
 
 import { getCurrentUser } from "@/actions/auth"
 import { getCurrentPartnerDetails } from "@/actions/partners"
-import { getAllSellers } from "@/actions/sellers"
+import getAllSellers from "@/actions/sellers/get-all"
 import type { Seller } from "@/lib/definitions/sellers"
 import { createAdminClient } from "@/lib/supabase/admin"
 
@@ -22,12 +22,12 @@ async function getSellersForCurrentUser(): Promise<Seller[]> {
 	}
 
 	try {
-		if (user.role === "admin") {
+		if (user.role === "admin" || user.role === "staff") {
 			return await getAllSellers()
 		}
 
 		if (user.role === "seller") {
-			const { data: seller, error } = await supabase.from("sellers").select("*").eq("user_id", user.id)
+			const { data: seller, error } = await supabase.from("sellers").select("*").eq("user_id", user.id).is("deleted_at", null)
 			if (error) {
 				console.error("Erro ao buscar dados do vendedor logado:", error)
 				return []
@@ -42,7 +42,7 @@ async function getSellersForCurrentUser(): Promise<Seller[]> {
 				return []
 			}
 
-			const { data: seller, error } = await supabase.from("sellers").select("*").eq("id", partnerDetails.sellerId)
+			const { data: seller, error } = await supabase.from("sellers").select("*").eq("id", partnerDetails.sellerId).is("deleted_at", null)
 
 			if (error) {
 				console.error("Erro ao buscar vendedor do parceiro:", error)

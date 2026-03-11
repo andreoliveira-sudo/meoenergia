@@ -1,6 +1,6 @@
 "use server"
 
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import type { ActionResponse } from "@/types/action-response"
 
 async function deleteCustomer(customerId: string): Promise<ActionResponse<{ customerId: string }>> {
@@ -9,21 +9,16 @@ async function deleteCustomer(customerId: string): Promise<ActionResponse<{ cust
 	}
 
 	try {
-		const supabase = await createClient()
+		const supabase = createAdminClient()
 
-		const { error } = await supabase.from("customers").delete().eq("id", customerId)
+		const { error } = await supabase
+			.from("customers")
+			.update({ deleted_at: new Date().toISOString() })
+			.eq("id", customerId)
+			.is("deleted_at", null)
 
 		if (error) {
 			console.error("Erro ao deletar customer (Supabase):", error)
-
-			if (error.code === "23503") {
-				// Foreign key violation
-				return {
-					success: false,
-					message: "Não é possível deletar este cliente, pois ele está associado a uma ou mais simulações ou pedidos."
-				}
-			}
-
 			return {
 				success: false,
 				message: "Erro ao deletar o cliente. Por favor, tente novamente."

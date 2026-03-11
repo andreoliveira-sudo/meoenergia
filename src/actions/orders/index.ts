@@ -9,6 +9,7 @@ import uploadOrderFiles from "./upload-order-files"
 import listOrderFiles from "./list-order-files"
 import checkOrderDocumentsStatus from "./check-order-documents-status"
 import getOrdersForCurrentUser from "./get-orders-for-current-user"
+import { getOrdersPaginated } from "./get-orders-paginated"
 
 export {
 	createOrderFromSimulation,
@@ -21,5 +22,6 @@ export {
 	uploadOrderFiles,
 	listOrderFiles,
 	checkOrderDocumentsStatus,
-	getOrdersForCurrentUser
+	getOrdersForCurrentUser,
+	getOrdersPaginated
 }

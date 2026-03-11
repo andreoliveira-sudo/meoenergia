@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Loader2, Save, Shield } from "lucide-react"
 import { useEffect, useMemo, useTransition, useState } from "react"
 import { useForm } from "react-hook-form"
-import { toast } from "sonner"
+import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 import { getAllPermissions } from "@/actions/permissions"
 import { getUserPermissionsDetailed, updateUserPermissions } from "@/actions/users"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
@@ -45,6 +45,7 @@ const groupPermissions = (permissions: PermissionData[]) => {
 export function EditUserPermissionsForm({ user, onSuccess }: EditUserPermissionsFormProps) {
 	const [isPending, startTransition] = useTransition()
 	const queryClient = useQueryClient()
+	const { execute } = useOperationFeedback()
 	// Tracks permissions that are loaded dynamically
 	const [permissionIds, setPermissionIds] = useState<string[]>([])
 
@@ -101,24 +102,20 @@ export function EditUserPermissionsForm({ user, onSuccess }: EditUserPermissions
 	}
 
 	function onSubmit(data: Record<string, boolean>) {
-		startTransition(async () => {
-			// Filter only true/false values for known permissions
-			// Validation is loose here as we are dealing with dynamic keys
-			const permissionsPayload = data as Record<PermissionId, boolean>
+		// Filter only true/false values for known permissions
+		// Validation is loose here as we are dealing with dynamic keys
+		const permissionsPayload = data as Record<PermissionId, boolean>
 
-			const result = await updateUserPermissions({
+		execute({
+			action: () => updateUserPermissions({
 				userId: user.id,
 				permissions: permissionsPayload
-			})
-
-			if (result.success) {
-				toast.success(result.message)
+			}),
+			loadingMessage: "Salvando permissões...",
+			successMessage: (res) => res.message,
+			onSuccess: () => {
 				queryClient.invalidateQueries({ queryKey: ["user-permissions", user.id] })
 				onSuccess()
-			} else {
-				toast.error("Erro ao salvar", {
-					description: result.message
-				})
 			}
 		})
 	}

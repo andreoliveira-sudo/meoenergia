@@ -45,9 +45,12 @@ async function getCustomersForCurrentUser(): Promise<CustomerWithRelations[]> {
         kdi,
         type,
         company_name,
+        name,
         cnpj,
+        cpf,
 				city,
 				state,
+				created_at,
         partners (
           contact_name
         ),
@@ -56,6 +59,7 @@ async function getCustomersForCurrentUser(): Promise<CustomerWithRelations[]> {
         )
       `
 				)
+				.is("deleted_at", null)
 				.order("kdi", { ascending: false })
 				.eq("internal_manager", sellerId)
 
@@ -67,17 +71,19 @@ async function getCustomersForCurrentUser(): Promise<CustomerWithRelations[]> {
 			const mappedData = data.map((customer) => {
 				const partner = Array.isArray(customer.partners) ? customer.partners[0] : customer.partners
 				const seller = Array.isArray(customer.sellers) ? customer.sellers[0] : customer.sellers
+				const isPf = customer.type === "pf"
 
 				return {
 					id: customer.id,
 					kdi: customer.kdi,
 					type: customer.type,
-					company_name: customer.company_name,
-					cnpj: customer.cnpj,
+					company_name: isPf ? (customer.name || "") : (customer.company_name || ""),
+					cnpj: isPf ? (customer.cpf || "") : (customer.cnpj || ""),
 					partner_name: partner?.contact_name || "N/A",
 					internal_manager_name: seller?.name || "N/A",
 					city: customer.city,
-					state: customer.state
+					state: customer.state,
+					created_at: customer.created_at
 				}
 			})
 
@@ -101,9 +107,12 @@ async function getCustomersForCurrentUser(): Promise<CustomerWithRelations[]> {
         kdi,
         type,
         company_name,
+        name,
         cnpj,
+        cpf,
 				city,
 				state,
+				created_at,
         partners (
           contact_name
         ),
@@ -112,6 +121,7 @@ async function getCustomersForCurrentUser(): Promise<CustomerWithRelations[]> {
         )
       `
 				)
+				.is("deleted_at", null)
 				.order("kdi", { ascending: false })
 				.eq("partner_id", partnerId)
 
@@ -123,17 +133,19 @@ async function getCustomersForCurrentUser(): Promise<CustomerWithRelations[]> {
 			const mappedData = data.map((customer) => {
 				const partner = Array.isArray(customer.partners) ? customer.partners[0] : customer.partners
 				const seller = Array.isArray(customer.sellers) ? customer.sellers[0] : customer.sellers
+				const isPf = customer.type === "pf"
 
 				return {
 					id: customer.id,
 					kdi: customer.kdi,
 					type: customer.type,
-					company_name: customer.company_name,
-					cnpj: customer.cnpj,
+					company_name: isPf ? (customer.name || "") : (customer.company_name || ""),
+					cnpj: isPf ? (customer.cpf || "") : (customer.cnpj || ""),
 					partner_name: partner?.contact_name || "N/A",
 					internal_manager_name: seller?.name || "N/A",
 					city: customer.city,
-					state: customer.state
+					state: customer.state,
+					created_at: customer.created_at
 				}
 			})
 

@@ -117,6 +117,7 @@ export type Database = {
           contact_phone: string
           created_at: string
           created_by_user_id: string
+          deleted_at: string | null
           id: string
           incorporation_date: string | null
           internal_manager: string | null
@@ -143,6 +144,7 @@ export type Database = {
           contact_phone: string
           created_at?: string
           created_by_user_id?: string
+          deleted_at?: string | null
           id?: string
           incorporation_date?: string | null
           internal_manager?: string | null
@@ -169,6 +171,7 @@ export type Database = {
           contact_phone?: string
           created_at?: string
           created_by_user_id?: string
+          deleted_at?: string | null
           id?: string
           incorporation_date?: string | null
           internal_manager?: string | null
@@ -210,18 +213,21 @@ export type Database = {
       equipment_brands: {
         Row: {
           created_at: string
+          deleted_at: string | null
           id: string
           name: string
           updated_at: string
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           id?: string
           name: string
           updated_at?: string
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           id?: string
           name?: string
           updated_at?: string
@@ -253,6 +259,7 @@ export type Database = {
         Row: {
           brand_id: string | null
           created_at: string
+          deleted_at: string | null
           id: number
           name: string
           type_id: string
@@ -261,6 +268,7 @@ export type Database = {
         Insert: {
           brand_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: number
           name: string
           type_id: string
@@ -269,6 +277,7 @@ export type Database = {
         Update: {
           brand_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: number
           name?: string
           type_id?: string
@@ -293,18 +302,21 @@ export type Database = {
       }
       group_members: {
         Row: {
+          deleted_at: string | null
           group_id: string
           joined_at: string
           role: string | null
           user_id: string
         }
         Insert: {
+          deleted_at?: string | null
           group_id: string
           joined_at?: string
           role?: string | null
           user_id: string
         }
         Update: {
+          deleted_at?: string | null
           group_id?: string
           joined_at?: string
           role?: string | null
@@ -330,6 +342,7 @@ export type Database = {
       group_rules: {
         Row: {
           created_at: string
+          deleted_at: string | null
           entity: string
           group_id: string | null
           id: string
@@ -338,6 +351,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           entity: string
           group_id?: string | null
           id?: string
@@ -346,6 +360,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           entity?: string
           group_id?: string | null
           id?: string
@@ -580,6 +595,7 @@ export type Database = {
           connection_voltage: string
           created_at: string
           created_by_user_id: string | null
+          deleted_at: string | null
           current_consumption: number
           customer_id: string
           energy_provider: string
@@ -603,6 +619,9 @@ export type Database = {
           service_fee_60: number
           status: Database["public"]["Enums"]["enum_order_status"]
           structure_type: string
+          financing_term: number
+          monthly_bill_value: number
+          payment_day: number
           system_power: number
           updated_at: string
         }
@@ -610,6 +629,7 @@ export type Database = {
           connection_voltage: string
           created_at?: string
           created_by_user_id?: string | null
+          deleted_at?: string | null
           current_consumption: number
           customer_id: string
           energy_provider: string
@@ -628,6 +648,9 @@ export type Database = {
           other_costs?: number | null
           seller_id?: string | null
           service_fee?: number | null
+          financing_term?: number
+          monthly_bill_value?: number
+          payment_day?: number
           service_fee_36: number
           service_fee_48: number
           service_fee_60: number
@@ -640,6 +663,7 @@ export type Database = {
           connection_voltage?: string
           created_at?: string
           created_by_user_id?: string | null
+          deleted_at?: string | null
           current_consumption?: number
           customer_id?: string
           energy_provider?: string
@@ -658,6 +682,9 @@ export type Database = {
           other_costs?: number | null
           seller_id?: string | null
           service_fee?: number | null
+          financing_term?: number
+          monthly_bill_value?: number
+          payment_day?: number
           service_fee_36?: number
           service_fee_48?: number
           service_fee_60?: number
@@ -761,6 +788,7 @@ export type Database = {
           contact_mobile: string
           contact_name: string
           created_at: string
+          deleted_at: string | null
           id: string
           is_active: boolean
           kdi: number
@@ -783,6 +811,7 @@ export type Database = {
           contact_mobile: string
           contact_name: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           is_active?: boolean
           kdi?: number
@@ -805,6 +834,7 @@ export type Database = {
           contact_mobile?: string
           contact_name?: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           is_active?: boolean
           kdi?: number
@@ -934,6 +964,7 @@ export type Database = {
           complement: string | null
           cpf: string
           created_at: string | null
+          deleted_at: string | null
           email: string
           id: string
           is_active: boolean
@@ -953,6 +984,7 @@ export type Database = {
           complement?: string | null
           cpf: string
           created_at?: string | null
+          deleted_at?: string | null
           email: string
           id?: string
           is_active?: boolean
@@ -972,6 +1004,7 @@ export type Database = {
           complement?: string | null
           cpf?: string
           created_at?: string | null
+          deleted_at?: string | null
           email?: string
           id?: string
           is_active?: boolean
@@ -1000,6 +1033,7 @@ export type Database = {
           connection_voltage: string | null
           created_at: string
           created_by_user_id: string | null
+          deleted_at: string | null
           current_consumption: number
           customer_id: string | null
           energy_provider: string | null
@@ -1031,6 +1065,7 @@ export type Database = {
           connection_voltage: string | null
           created_at?: string
           created_by_user_id?: string | null
+          deleted_at?: string | null
           current_consumption: number
           customer_id?: string | null
           energy_provider?: string | null
@@ -1062,6 +1097,7 @@ export type Database = {
           connection_voltage?: string | null
           created_at?: string
           created_by_user_id?: string | null
+          deleted_at?: string | null
           current_consumption?: number
           customer_id?: string | null
           energy_provider?: string | null
@@ -1144,18 +1180,21 @@ export type Database = {
       structure_types: {
         Row: {
           created_at: string
+          deleted_at: string | null
           id: string
           name: string
           updated_at: string
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           id?: string
           name: string
           updated_at?: string
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           id?: string
           name?: string
           updated_at?: string
@@ -1322,6 +1361,7 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          is_active: boolean
           name: string
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string
@@ -1330,6 +1370,7 @@ export type Database = {
           created_at?: string
           email: string
           id: string
+          is_active?: boolean
           name: string
           role: Database["public"]["Enums"]["user_role"]
           updated_at?: string
@@ -1338,6 +1379,7 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          is_active?: boolean
           name?: string
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
@@ -1364,20 +1406,17 @@ export type Database = {
       customer_type: "pf" | "pj"
       enum_order_status:
       | "analysis_pending"
-      | "pre_analysis"
-      | "confirmation_pending"
-      | "credit_analysis"
+      | "analysis_approved"
+      | "analysis_rejected"
       | "documents_pending"
-      | "final_analysis"
-      | "approved"
-      | "rejected"
-      | "contract_signing"
-      | "completed"
-      | "canceled"
       | "docs_analysis"
-      | "pre_approved"
-      | "frozen"
-      | "pre_approved_orange"
+      | "sending_distributor_invoice"
+      | "payment_distributor"
+      | "access_opinion"
+      | "initial_payment_integrator"
+      | "final_payment_integrator"
+      | "finished"
+      | "canceled"
       enum_partners_status: "pending" | "approved" | "rejected"
       enum_simulation_status:
       | "initial_contact"
@@ -1516,20 +1555,17 @@ export const Constants = {
       customer_type: ["pf", "pj"],
       enum_order_status: [
         "analysis_pending",
-        "pre_analysis",
-        "confirmation_pending",
-        "credit_analysis",
+        "analysis_approved",
+        "analysis_rejected",
         "documents_pending",
-        "final_analysis",
-        "approved",
-        "rejected",
-        "contract_signing",
-        "completed",
-        "canceled",
         "docs_analysis",
-        "pre_approved",
-        "frozen",
-        "pre_approved_orange",
+        "sending_distributor_invoice",
+        "payment_distributor",
+        "access_opinion",
+        "initial_payment_integrator",
+        "final_payment_integrator",
+        "finished",
+        "canceled",
       ],
       enum_partners_status: ["pending", "approved", "rejected"],
       enum_simulation_status: [

@@ -3,7 +3,7 @@
 import { PostgrestError } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
 
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import type { ActionResponse } from "@/types/action-response"
 
 async function deleteOrder(orderId: string): Promise<ActionResponse<null>> {
@@ -11,10 +11,14 @@ async function deleteOrder(orderId: string): Promise<ActionResponse<null>> {
 		return { success: false, message: "ID do Pedido não fornecido." }
 	}
 
-	const supabase = await createClient()
+	const supabase = createAdminClient()
 
 	try {
-		const { error } = await supabase.from("orders").delete().eq("id", orderId)
+		const { error } = await supabase
+			.from("orders")
+			.update({ deleted_at: new Date().toISOString() })
+			.eq("id", orderId)
+			.is("deleted_at", null)
 
 		if (error) {
 			console.error("Erro ao deletar pedido (Supabase):", error)

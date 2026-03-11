@@ -2,10 +2,11 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { CheckCircle, Loader2 } from "lucide-react"
-import { useEffect, useState, useTransition } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
 import { approvePartner } from "@/actions/partners"
+import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 import { getAllApprovedSellers } from "@/actions/sellers"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -21,8 +22,8 @@ interface ApprovePartnerDialogProps {
 
 export const ApprovePartnerDialog = ({ partner, open, onOpenChange }: ApprovePartnerDialogProps) => {
 	const [selectedSeller, setSelectedSeller] = useState<string>("")
-	const [isPending, startTransition] = useTransition()
 	const queryClient = useQueryClient()
+	const { execute } = useOperationFeedback()
 
 	const { data: sellers, isLoading: isLoadingSellers } = useQuery({
 		queryKey: ["approved-sellers"],
@@ -36,24 +37,15 @@ export const ApprovePartnerDialog = ({ partner, open, onOpenChange }: ApprovePar
 			return
 		}
 
-		startTransition(() => {
-			toast.promise(approvePartner({ partnerId: partner.id, sellerId: selectedSeller }), {
-				loading: "Aprovando parceiro...",
-				success: (result) => {
-					if (result.success) {
-						queryClient.invalidateQueries({ queryKey: ["partners"] })
-						onOpenChange(false)
-						return result.message
-					} else {
-						// Lança um erro para que seja capturado pelo `error` do toast.promise
-						throw new Error(result.message)
-					}
-				},
-				error: (err: Error) => {
-					// O erro lançado no `success` ou um erro inesperado da action é capturado aqui
-					return err.message
-				}
-			})
+		execute({
+			action: () => approvePartner({ partnerId: partner.id, sellerId: selectedSeller }),
+			loadingMessage: "Aprovando parceiro...",
+			successMessage: (res) => res.message,
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: ["partners"] })
+				queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] })
+				onOpenChange(false)
+			}
 		})
 	}
 
@@ -72,7 +64,7 @@ export const ApprovePartnerDialog = ({ partner, open, onOpenChange }: ApprovePar
 				</DialogHeader>
 				<div className="space-y-4 py-4">
 					<div className="space-y-2">
-						<Label htmlFor="seller-select">Vendedor Responsável</Label>
+						<Label htmlFor="seller-select">Vendedor Responsavel</Label>
 						{isLoadingSellers ? (
 							<div className="flex items-center space-x-2">
 								<Loader2 className="animate-spin" />
@@ -95,11 +87,11 @@ export const ApprovePartnerDialog = ({ partner, open, onOpenChange }: ApprovePar
 					</div>
 				</div>
 				<DialogFooter>
-					<Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
+					<Button variant="outline" onClick={() => onOpenChange(false)}>
 						Cancelar
 					</Button>
-					<Button onClick={handleApprove} disabled={isPending || isLoadingSellers || !selectedSeller}>
-						{isPending ? <Loader2 className="animate-spin" /> : <CheckCircle />}
+					<Button onClick={handleApprove} disabled={isLoadingSellers || !selectedSeller}>
+						<CheckCircle />
 						Aprovar Parceiro
 					</Button>
 				</DialogFooter>

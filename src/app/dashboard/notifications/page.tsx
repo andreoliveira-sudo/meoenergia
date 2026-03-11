@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { toast } from "sonner"
+import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 
 type Notification = {
     id: string
@@ -29,6 +29,7 @@ export default function NotificationsPage() {
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState('')
     const supabase = createClient()
+    const { execute } = useOperationFeedback()
 
     useEffect(() => {
         fetchNotifications()
@@ -46,9 +47,7 @@ export default function NotificationsPage() {
             .order('created_at', { ascending: false })
             .limit(100)
 
-        if (error) {
-            toast.error("Erro ao carregar notificações")
-        } else {
+        if (!error) {
             setNotifications(data || [])
         }
         setLoading(false)
@@ -60,9 +59,18 @@ export default function NotificationsPage() {
     }
 
     async function markAllAsRead() {
-        setNotifications(prev => prev.map(n => ({ ...n, read: true })))
-        await supabase.from('notifications').update({ read: true }).neq('read', true)
-        toast.success("Todas as notificações marcadas como lidas")
+        execute({
+            action: async () => {
+                const { error } = await supabase.from('notifications').update({ read: true }).neq('read', true)
+                if (error) throw error
+                return { success: true, message: "Todas as notificacoes marcadas como lidas" }
+            },
+            loadingMessage: "Marcando todas como lidas...",
+            successMessage: "Todas as notificacoes marcadas como lidas",
+            onSuccess: () => {
+                setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+            }
+        })
     }
 
     const filteredNotifications = notifications.filter(n =>
@@ -73,9 +81,9 @@ export default function NotificationsPage() {
     return (
         <div className="flex flex-col gap-6 p-6">
             <div className="flex flex-col gap-2">
-                <h1 className="text-3xl font-bold tracking-tight">Notificações</h1>
+                <h1 className="text-3xl font-bold tracking-tight">Notificacoes</h1>
                 <p className="text-muted-foreground">
-                    Veja todo o histórico de suas notificações e alertas do sistema.
+                    Veja todo o historico de suas notificacoes e alertas do sistema.
                 </p>
             </div>
 
@@ -85,7 +93,7 @@ export default function NotificationsPage() {
                 <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="Buscar notificações..."
+                        placeholder="Buscar notificacoes..."
                         className="pl-8"
                         value={filter}
                         onChange={(e) => setFilter(e.target.value)}
@@ -101,7 +109,7 @@ export default function NotificationsPage() {
                     <div className="text-center py-10 text-muted-foreground">Carregando...</div>
                 ) : filteredNotifications.length === 0 ? (
                     <div className="text-center py-10 text-muted-foreground">
-                        Nenhuma notificação encontrada.
+                        Nenhuma notificacao encontrada.
                     </div>
                 ) : (
                     filteredNotifications.map((notification) => (

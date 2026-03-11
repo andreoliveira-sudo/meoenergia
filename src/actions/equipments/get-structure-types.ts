@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server"
 async function getStructureTypes(): Promise<StructureType[]> {
 	try {
 		const supabase = await createClient()
-		const { data, error } = await supabase.from("structure_types").select("*").order("name")
+		const { data, error } = await supabase.from("structure_types").select("*").is("deleted_at", null).order("name")
 
 		if (error) {
 			console.error("Erro ao buscar tipos de estrutura:", error)

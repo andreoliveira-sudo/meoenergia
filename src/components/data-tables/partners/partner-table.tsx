@@ -10,7 +10,7 @@ import {
 	getSortedRowModel,
 	useReactTable
 } from "@tanstack/react-table"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
 import { getPartnersForCurrentUser } from "@/actions/partners"
 import { columns } from "@/components/data-tables/partners/columns"
@@ -22,7 +22,7 @@ import { usePersistedTableState } from "@/hooks/use-persisted-table-state"
 
 const PARTNER_TABLE_STORAGE_KEY = "partner-table-state"
 
-const PartnerTable = () => {
+const PartnerTable = ({ dateFrom, dateTo }: { dateFrom?: string; dateTo?: string }) => {
 	const [rowSelection, setRowSelection] = useState({})
 
 	const { sorting, setSorting, columnFilters, setColumnFilters, columnVisibility, setColumnVisibility } = usePersistedTableState({
@@ -44,13 +44,29 @@ const PartnerTable = () => {
 		}
 	})
 
-	const { data, isLoading } = useQuery({
+	const { data: rawData, isLoading } = useQuery({
 		queryKey: ["partners"],
-		queryFn: () => getPartnersForCurrentUser()
+		queryFn: () => getPartnersForCurrentUser(),
+		refetchInterval: 30_000,
+		refetchIntervalInBackground: false
 	})
 
+	const data = useMemo(() => {
+		let filtered = rawData ?? []
+		if (dateFrom || dateTo) {
+			filtered = filtered.filter((p) => {
+				if (!p.created_at) return false
+				const d = new Date(p.created_at); const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+				if (dateFrom && dateStr < dateFrom) return false
+				if (dateTo && dateStr > dateTo) return false
+				return true
+			})
+		}
+		return filtered
+	}, [rawData, dateFrom, dateTo])
+
 	const table = useReactTable({
-		data: data ?? [],
+		data,
 		columns,
 		state: {
 			sorting,

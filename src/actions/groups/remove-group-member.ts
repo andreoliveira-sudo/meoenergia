@@ -1,6 +1,6 @@
 "use server"
 
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import type { ActionResponse } from "@/types/action-response"
 
 type RemoveGroupMemberParams = {
@@ -19,13 +19,14 @@ export default async function removeGroupMemberAction({
 	userId
 }: RemoveGroupMemberParams): Promise<ActionResponse<RemovedGroupMember>> {
 	try {
-		const supabase = await createClient()
+		const supabase = createAdminClient()
 
 		const { data, error } = await supabase
 			.from("group_members")
-			.delete()
+			.update({ deleted_at: new Date().toISOString() })
 			.eq("group_id", groupId)
 			.eq("user_id", userId)
+			.is("deleted_at", null)
 			.select("group_id, user_id, role")
 			.single()
 

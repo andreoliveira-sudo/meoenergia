@@ -56,7 +56,7 @@ const columns: ColumnDef<EquipmentWithRelations>[] = [
 			)
 		},
 		cell: ({ row }) => {
-			return <div className="text-center">{formatDate(row.getValue("created_at"))}</div>
+			return <div className="text-left">{formatDate(row.getValue("created_at"))}</div>
 		}
 	},
 	{

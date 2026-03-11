@@ -8,7 +8,7 @@ async function getEquipmentsByBrandAndType(typeId: string, brandId: string | nul
 
 	try {
 		const supabase = await createClient()
-		let query = supabase.from("equipments").select("*").eq("type_id", typeId)
+		let query = supabase.from("equipments").select("*").is("deleted_at", null).eq("type_id", typeId)
 
 		if (brandId) {
 			query = query.eq("brand_id", brandId)

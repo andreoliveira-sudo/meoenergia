@@ -18,7 +18,7 @@ async function getSellerByUserId(userId: string): Promise<ActionResponse<Seller 
 	try {
 		const supabase = await createClient()
 
-		const { data: seller, error } = await supabase.from("sellers").select("*").eq("user_id", userId).maybeSingle()
+		const { data: seller, error } = await supabase.from("sellers").select("*").eq("user_id", userId).is("deleted_at", null).maybeSingle()
 
 		if (error) {
 			console.error("Erro ao buscar vendedor por User ID:", error)

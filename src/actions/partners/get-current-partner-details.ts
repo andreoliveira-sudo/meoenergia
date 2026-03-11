@@ -24,7 +24,7 @@ async function getCurrentPartnerDetails(): Promise<PartnerDetails | null> {
 	}
 
 	try {
-		const { data: partner, error } = await supabase.from("partners").select("status, is_active, seller_id").eq("user_id", user.id).single()
+		const { data: partner, error } = await supabase.from("partners").select("status, is_active, seller_id").eq("user_id", user.id).is("deleted_at", null).single()
 
 		if (error || !partner) {
 			// Isso é esperado se o usuário logado não for um parceiro.

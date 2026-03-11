@@ -65,9 +65,9 @@ async function updateSimulation({ simulationId, customerId, data }: UpdateSimula
 			kit_module_id: Number(data.kit_module),
 			kit_inverter_id: Number(data.kit_inverter),
 			kit_others: data.kit_others ? Number(data.kit_others) : null,
-			equipment_value: parseCurrencyStringToNumber(data.equipmentValue),
-			labor_value: parseCurrencyStringToNumber(data.laborValue),
-			other_costs: parseCurrencyStringToNumber(data.otherCosts),
+			equipment_value: typeof data.equipmentValue === "number" ? data.equipmentValue : parseCurrencyStringToNumber(data.equipmentValue as any),
+			labor_value: typeof data.laborValue === "number" ? data.laborValue : parseCurrencyStringToNumber(data.laborValue as any),
+			other_costs: typeof data.otherCosts === "number" ? data.otherCosts : parseCurrencyStringToNumber(data.otherCosts as any),
 			notes: data.notes
 		}
 

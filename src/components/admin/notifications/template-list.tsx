@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { toast } from 'sonner'
 import { Pencil, Save, AlertCircle, Info, FileText, Users, Activity } from 'lucide-react'
 
 import {
@@ -41,9 +40,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { NotificationTemplate } from '@/actions/settings/get-templates'
 import updateNotificationTemplate from '@/actions/settings/update-template'
 import { useRouter } from 'next/navigation'
+import { useOperationFeedback } from '@/components/feedback/operation-feedback'
 
 const formSchema = z.object({
-    whatsapp_text: z.string().min(1, 'O texto da mensagem é obrigatório'),
+    whatsapp_text: z.string().min(1, 'O texto da mensagem e obrigatorio'),
     active: z.boolean(),
 })
 
@@ -55,6 +55,7 @@ export default function TemplateList({ initialTemplates }: TemplateListProps) {
     const [editingTemplate, setEditingTemplate] = useState<NotificationTemplate | null>(null)
     const [open, setOpen] = useState(false)
     const router = useRouter()
+    const { execute } = useOperationFeedback()
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -76,24 +77,19 @@ export default function TemplateList({ initialTemplates }: TemplateListProps) {
     async function onSubmit(values: z.infer<typeof formSchema>) {
         if (!editingTemplate) return
 
-        try {
-            const result = await updateNotificationTemplate({
+        execute({
+            action: () => updateNotificationTemplate({
                 id: editingTemplate.id,
                 whatsapp_text: values.whatsapp_text,
                 active: values.active,
-            })
-
-            if (result.success) {
-                toast.success('Template atualizado com sucesso')
+            }),
+            loadingMessage: 'Atualizando template...',
+            successMessage: 'Template atualizado com sucesso',
+            onSuccess: () => {
                 setOpen(false)
                 router.refresh()
-            } else {
-                toast.error(result.message || 'Erro ao atualizar template')
             }
-        } catch (error) {
-            toast.error('Ocorreu um erro inesperado')
-            console.error(error)
-        }
+        })
     }
 
     // Agrupar templates por categoria
@@ -105,17 +101,17 @@ export default function TemplateList({ initialTemplates }: TemplateListProps) {
         <div className="space-y-6">
             <Alert>
                 <Info className="h-4 w-4" />
-                <AlertTitle>Variáveis Disponíveis</AlertTitle>
+                <AlertTitle>Variaveis Disponiveis</AlertTitle>
                 <AlertDescription>
-                    Você pode usar as seguintes variáveis no texto das mensagens para personalizá-las:
+                    Voce pode usar as seguintes variaveis no texto das mensagens para personaliza-las:
                     <ul className="list-disc list-inside mt-2 font-mono text-xs">
                         <li>{'{{name}}'} - Nome (Contato)</li>
-                        <li>{'{{customer_name}}'} - Razão Social / Nome Cliente (Pedidos Aprovados)</li>
+                        <li>{'{{customer_name}}'} - Razao Social / Nome Cliente (Pedidos Aprovados)</li>
                         <li>{'{{order_id}}'} - ID do Pedido</li>
                         <li>{'{{mensalidade}}'} - Valor da Parcela (Pedidos Aprovados)</li>
                         <li>{'{{prazo}}'} - Prazo em Meses (Pedidos Aprovados)</li>
-                        <li>{'{{simulation_id}}'} - ID da Simulação (Notifications de Simulação)</li>
-                        <li>{'{{total_value}}'} - Valor Total (Notifications de Simulação)</li>
+                        <li>{'{{simulation_id}}'} - ID da Simulacao (Notifications de Simulacao)</li>
+                        <li>{'{{total_value}}'} - Valor Total (Notifications de Simulacao)</li>
                     </ul>
                 </AlertDescription>
             </Alert>
@@ -128,7 +124,7 @@ export default function TemplateList({ initialTemplates }: TemplateListProps) {
                     </TabsTrigger>
                     <TabsTrigger value="simulations" className="flex items-center gap-2">
                         <Activity className="h-4 w-4" />
-                        Simulações
+                        Simulacoes
                     </TabsTrigger>
                     <TabsTrigger value="partners" className="flex items-center gap-2">
                         <Users className="h-4 w-4" />
@@ -148,7 +144,7 @@ export default function TemplateList({ initialTemplates }: TemplateListProps) {
                     <TemplateGrid
                         templates={simulationTemplates}
                         onEdit={handleEdit}
-                        emptyMessage="Nenhum template de simulação encontrado."
+                        emptyMessage="Nenhum template de simulacao encontrado."
                     />
                 </TabsContent>
 
@@ -180,14 +176,14 @@ export default function TemplateList({ initialTemplates }: TemplateListProps) {
                                         <FormLabel>Mensagem (WhatsApp)</FormLabel>
                                         <FormControl>
                                             <Textarea
-                                                placeholder="Olá {{name}}..."
+                                                placeholder="Ola {{name}}..."
                                                 className="min-h-[150px] font-mono text-sm"
                                                 {...field}
                                             />
                                         </FormControl>
                                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                             <AlertCircle className="h-3 w-3" />
-                                            <span>Variáveis: {'{{name}}'}, {'{{customer_name}}'}, {'{{order_id}}'}, {'{{mensalidade}}'}, {'{{prazo}}'}</span>
+                                            <span>Variaveis: {'{{name}}'}, {'{{customer_name}}'}, {'{{order_id}}'}, {'{{mensalidade}}'}, {'{{prazo}}'}</span>
                                         </div>
                                         <FormMessage />
                                     </FormItem>
@@ -202,7 +198,7 @@ export default function TemplateList({ initialTemplates }: TemplateListProps) {
                                         <div className="space-y-0.5">
                                             <FormLabel>Ativo</FormLabel>
                                             <DialogDescription>
-                                                Habilitar o envio automático deste template
+                                                Habilitar o envio automatico deste template
                                             </DialogDescription>
                                         </div>
                                         <FormControl>
@@ -221,7 +217,7 @@ export default function TemplateList({ initialTemplates }: TemplateListProps) {
                                 </Button>
                                 <Button type="submit">
                                     <Save className="mr-2 h-4 w-4" />
-                                    Salvar Alterações
+                                    Salvar Alteracoes
                                 </Button>
                             </DialogFooter>
                         </form>

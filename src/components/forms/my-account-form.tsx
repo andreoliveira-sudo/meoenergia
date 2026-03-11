@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { Eye, EyeOff, Loader2, Save } from "lucide-react"
 import { useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
-import { toast } from "sonner"
+import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 
 import { updateUserName, updateUserPassword } from "@/actions/users"
 import { Button } from "@/components/ui/button"
@@ -30,6 +30,7 @@ export function MyAccountForm({ user }: MyAccountFormProps) {
 	const [isNamePending, startNameTransition] = useTransition()
 	const [isPasswordPending, startPasswordTransition] = useTransition()
 	const queryClient = useQueryClient()
+	const { execute } = useOperationFeedback()
 
 	const [showCurrentPassword, setShowCurrentPassword] = useState(false)
 	const [showNewPassword, setShowNewPassword] = useState(false)
@@ -53,47 +54,34 @@ export function MyAccountForm({ user }: MyAccountFormProps) {
 		const isPasswordChanged = !!data.newPassword
 
 		if (isNameChanged) {
-			startNameTransition(() => {
-				toast.promise(updateUserName({ newName: data.name, role: user.role }), {
-					loading: "Atualizando nome...",
-					success: (res) => {
-						if (res.success) {
-							queryClient.invalidateQueries({ queryKey: ["currentUser"] })
-							// Atualiza o valor padrão do formulário para o novo nome
-							form.reset({ ...form.getValues(), name: data.name })
-							return "Nome atualizado com sucesso!"
-						}
-						throw new Error(res.message)
-					},
-					error: (err: Error) => err.message
-				})
+			execute({
+				action: () => updateUserName({ newName: data.name, role: user.role }),
+				loadingMessage: "Atualizando nome...",
+				successMessage: "Nome atualizado com sucesso!",
+				onSuccess: () => {
+					queryClient.invalidateQueries({ queryKey: ["currentUser"] })
+					// Atualiza o valor padrão do formulário para o novo nome
+					form.reset({ ...form.getValues(), name: data.name })
+				}
 			})
 		}
 
 		if (isPasswordChanged) {
-			startPasswordTransition(() => {
-				toast.promise(
-					updateUserPassword({
-						currentPassword: data.currentPassword!,
-						newPassword: data.newPassword!
-					}),
-					{
-						loading: "Atualizando senha...",
-						success: (res) => {
-							if (res.success) {
-								form.reset({
-									...form.getValues(),
-									currentPassword: "",
-									newPassword: "",
-									confirmPassword: ""
-								})
-								return "Senha atualizada com sucesso!"
-							}
-							throw new Error(res.message)
-						},
-						error: (err: Error) => err.message
-					}
-				)
+			execute({
+				action: () => updateUserPassword({
+					currentPassword: data.currentPassword!,
+					newPassword: data.newPassword!
+				}),
+				loadingMessage: "Atualizando senha...",
+				successMessage: "Senha atualizada com sucesso!",
+				onSuccess: () => {
+					form.reset({
+						...form.getValues(),
+						currentPassword: "",
+						newPassword: "",
+						confirmPassword: ""
+					})
+				}
 			})
 		}
 	}

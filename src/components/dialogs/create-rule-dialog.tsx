@@ -3,12 +3,12 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Loader2, PlusCircle } from "lucide-react"
-import { useState, useTransition } from "react"
+import { useState } from "react"
 import { useForm } from "react-hook-form"
-import { toast } from "sonner"
 
 import { addGroupRuleAction } from "@/actions/groups"
 import { getAllPartners } from "@/actions/partners"
+import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -23,8 +23,8 @@ type CreateRuleDialogProps = {
 
 export const CreateRuleDialog = ({ groupId }: CreateRuleDialogProps) => {
 	const [open, setOpen] = useState(false)
-	const [isPending, startTransition] = useTransition()
 	const queryClient = useQueryClient()
+	const { execute } = useOperationFeedback()
 
 	const form = useForm<CreateRuleSchema>({
 		resolver: zodResolver(createRuleSchema),
@@ -48,22 +48,18 @@ export const CreateRuleDialog = ({ groupId }: CreateRuleDialogProps) => {
 	}
 
 	const onSubmit = (values: CreateRuleSchema) => {
-		startTransition(async () => {
-			const result = await addGroupRuleAction({
+		execute({
+			action: () => addGroupRuleAction({
 				groupId,
 				entity: "partners",
 				rule_type: values.rule_type,
 				target_id: values.target_id
-			})
-
-			if (result.success) {
-				toast.success("Regra criada com sucesso")
-				await queryClient.invalidateQueries({ queryKey: ["group-rules", groupId] })
+			}),
+			loadingMessage: "Criando regra...",
+			successMessage: "Regra criada com sucesso",
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: ["group-rules", groupId] })
 				handleClose()
-			} else {
-				toast.error("Erro ao criar regra", {
-					description: result.message
-				})
 			}
 		})
 	}
@@ -102,7 +98,7 @@ export const CreateRuleDialog = ({ groupId }: CreateRuleDialogProps) => {
 								<FormItem>
 									<FormLabel>Tipo da regra</FormLabel>
 									<FormControl>
-										<Select onValueChange={field.onChange} value={field.value} disabled={isPending}>
+										<Select onValueChange={field.onChange} value={field.value}>
 											<SelectTrigger>
 												<SelectValue placeholder="Selecione o tipo da regra" />
 											</SelectTrigger>
@@ -127,7 +123,7 @@ export const CreateRuleDialog = ({ groupId }: CreateRuleDialogProps) => {
 										<Select
 											onValueChange={field.onChange}
 											value={field.value || undefined}
-											disabled={isLoadingPartners || isPending}
+											disabled={isLoadingPartners}
 										>
 											<SelectTrigger>
 												<SelectValue placeholder={isLoadingPartners ? "Carregando parceiros..." : "Selecione um parceiro"} />
@@ -160,11 +156,10 @@ export const CreateRuleDialog = ({ groupId }: CreateRuleDialogProps) => {
 						/>
 
 						<DialogFooter className="pt-2">
-							<Button type="button" variant="outline" onClick={handleClose} disabled={isPending}>
+							<Button type="button" variant="outline" onClick={handleClose}>
 								Cancelar
 							</Button>
-							<Button type="submit" disabled={isPending}>
-								{isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+							<Button type="submit">
 								Criar regra
 							</Button>
 						</DialogFooter>

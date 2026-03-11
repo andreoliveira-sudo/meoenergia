@@ -3,9 +3,8 @@
 import { useQueryClient } from "@tanstack/react-query"
 import { CheckCircle, Loader2, Pencil, ToggleLeft, ToggleRight, Trash2, XCircle } from "lucide-react"
 import { useState, useTransition } from "react"
-import { toast } from "sonner"
-
 import { approveSeller, deleteSeller, rejectSeller, setSellerActiveStatus } from "@/actions/sellers"
+import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 import { EditSellerDialog } from "@/components/dialogs/edit-seller-dialog"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -16,47 +15,41 @@ const SellerActions = ({ seller }: { seller: Seller }) => {
 	const [isPending, startTransition] = useTransition()
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 	const [isDeletePending, startDeleteTransition] = useTransition()
+	const { execute } = useOperationFeedback()
 
 	function handleApprovalAction(action: "approve" | "reject") {
-		startTransition(async () => {
-			const actionPromise = action === "approve" ? approveSeller(seller.id) : rejectSeller(seller.id)
-			const result = await actionPromise
-
-			if (result.success) {
-				toast.success(result.message)
+		startTransition(() => {
+			execute({
+				action: () => (action === "approve" ? approveSeller(seller.id) : rejectSeller(seller.id)),
+				loadingMessage: action === "approve" ? "Aprovando vendedor..." : "Rejeitando vendedor...",
+				successMessage: (res) => res.message,
+				onSuccess: () => {
 				queryClient.invalidateQueries({ queryKey: ["sellers"] })
-			} else {
-				toast.error(result.message)
+				queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] })
 			}
+			})
 		})
 	}
 
 	function handleToggleActive(isActive: boolean) {
-		startTransition(async () => {
-			const result = await setSellerActiveStatus({ sellerId: seller.id, isActive })
-			if (result.success) {
-				toast.success(result.message)
-				queryClient.invalidateQueries({ queryKey: ["sellers"] })
-			} else {
-				toast.error(result.message)
-			}
+		startTransition(() => {
+			execute({
+				action: () => setSellerActiveStatus({ sellerId: seller.id, isActive }),
+				loadingMessage: isActive ? "Reativando vendedor..." : "Inativando vendedor...",
+				successMessage: (res) => res.message,
+				onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sellers"] })
+			})
 		})
 	}
 
 	function handleDelete() {
-		startDeleteTransition(async () => {
-			try {
-				const result = await deleteSeller({ sellerId: seller.id, userId: seller.user_id })
-
-				if (result.success) {
-					queryClient.invalidateQueries({ queryKey: ["sellers"] })
-					toast.success(result.message)
-				} else {
-					toast.error(result.message)
-				}
-			} catch (err) {
-				toast.error(err instanceof Error ? err.message : "Erro desconhecido")
-			}
+		startDeleteTransition(() => {
+			execute({
+				action: () => deleteSeller({ sellerId: seller.id, userId: seller.user_id }),
+				loadingMessage: "Deletando vendedor...",
+				successMessage: (res) => res.message,
+				onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sellers"] })
+			})
 		})
 	}
 

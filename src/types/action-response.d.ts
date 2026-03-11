@@ -1,4 +1,4 @@
-export type ActionResponse<T> =
+export type ActionResponse<T = void> =
 	| {
 			success: true
 			message: string
@@ -7,4 +7,5 @@ export type ActionResponse<T> =
 	| {
 			success: false
 			message: string
+			errors?: Record<string, string[]>
 	  }

@@ -4,16 +4,20 @@ import { revalidatePath } from "next/cache"
 
 import { createAdminClient } from "@/lib/supabase/admin"
 import type { ActionResponse } from "@/types/action-response"
+import type { GlobalRateId } from "@/actions/settings/get-interest-rate"
 
 interface UpdateRateParams {
-	rateId: "service_fee_36" | "service_fee_48" | "service_fee_60" | "interest_rate_36" | "interest_rate_48" | "interest_rate_60"
+	rateId: GlobalRateId
 	value: number
 }
 
 async function updateRate({ rateId, value }: UpdateRateParams): Promise<ActionResponse<null>> {
 	try {
 		const supabase = createAdminClient()
-		const { error } = await supabase.from("rates").update({ value, updated_at: new Date().toISOString() }).eq("id", rateId)
+		const { error } = await supabase
+			.from("rates")
+			.update({ value, updated_at: new Date().toISOString() })
+			.eq("id", rateId)
 
 		if (error) {
 			console.error(`Error updating ${rateId}:`, error)

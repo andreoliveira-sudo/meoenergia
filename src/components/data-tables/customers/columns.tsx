@@ -6,8 +6,8 @@ import { ArrowUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import type { CustomerWithRelations } from "@/lib/definitions/customers"
-import { formatCnpj } from "@/lib/formatters"
-import { getFirstAndLastName } from "@/lib/utils"
+import { formatCnpj, formatCpf } from "@/lib/formatters"
+import { formatDate, getFirstAndLastName } from "@/lib/utils"
 import { CustomerTableActions } from "./customer-table-actions"
 
 export const columns: ColumnDef<CustomerWithRelations>[] = [
@@ -21,19 +21,57 @@ export const columns: ColumnDef<CustomerWithRelations>[] = [
 		)
 	},
 	{
+		accessorKey: "type",
+		header: "Tipo",
+		cell: ({ row }) => {
+			const type = row.getValue("type") as string
+			return (
+				<span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${type === "pj" ? "bg-blue-50 text-blue-700" : "bg-emerald-50 text-emerald-700"}`}>
+					{type === "pj" ? "PJ" : "PF"}
+				</span>
+			)
+		},
+		filterFn: (row, id, value) => {
+			return value.includes(row.getValue(id))
+		}
+	},
+	{
 		accessorKey: "company_name",
 		header: ({ column }) => (
 			<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-				Razão Social
+				Razão Social/Nome
 				<ArrowUpDown className="ml-2 h-4 w-4" />
 			</Button>
 		),
-		cell: ({ row }) => <div className="text-left font-medium">{row.getValue("company_name")}</div>
+		cell: ({ row }) => {
+			const name = (row.getValue("company_name") as string) || ""
+			return <div className="text-left font-medium">{name.toUpperCase()}</div>
+		}
 	},
 	{
 		accessorKey: "cnpj",
-		header: "CNPJ",
-		cell: ({ row }) => formatCnpj(row.getValue("cnpj"))
+		header: "CNPJ/CPF",
+		cell: ({ row }) => {
+			const type = row.original.type
+			const value = row.getValue("cnpj") as string
+			if (!value) return "-"
+			if (type === "pf") return formatCpf(value)
+			return formatCnpj(value)
+		}
+	},
+	{
+		accessorKey: "created_at",
+		header: ({ column }) => (
+			<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+				Data de Cadastro
+				<ArrowUpDown className="ml-2 h-4 w-4" />
+			</Button>
+		),
+		cell: ({ row }) => {
+			const value = row.getValue("created_at") as string | null
+			if (!value) return "-"
+			return formatDate(value)
+		}
 	},
 	{
 		accessorKey: "partner_name",

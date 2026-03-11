@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { Loader2, Save } from "lucide-react"
 import { useTransition } from "react"
 import { useForm } from "react-hook-form"
-import { toast } from "sonner"
+import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 
 import { updateStructureType } from "@/actions/equipments"
 import { Button } from "@/components/ui/button"
@@ -22,6 +22,7 @@ interface EditStructureTypeFormProps {
 export const EditStructureTypeForm = ({ structureType, onSuccess }: EditStructureTypeFormProps) => {
 	const [isPending, startTransition] = useTransition()
 	const queryClient = useQueryClient()
+	const { execute } = useOperationFeedback()
 
 	const form = useForm<AddStructureTypeData>({
 		resolver: zodResolver(addStructureTypeSchema),
@@ -31,18 +32,14 @@ export const EditStructureTypeForm = ({ structureType, onSuccess }: EditStructur
 	})
 
 	const onSubmit = (data: AddStructureTypeData) => {
-		startTransition(async () => {
-			const result = await updateStructureType({ structureTypeId: structureType.id, data })
-
-			if (result.success) {
-				toast.success(result.message)
+		execute({
+			action: () => updateStructureType({ structureTypeId: structureType.id, data }),
+			loadingMessage: "Salvando tipo de estrutura...",
+			successMessage: (res) => res.message,
+			onSuccess: () => {
 				queryClient.invalidateQueries({ queryKey: ["structure-types"] })
 				form.reset()
 				onSuccess?.()
-			} else {
-				toast.error("Erro ao atualizar", {
-					description: result.message
-				})
 			}
 		})
 	}

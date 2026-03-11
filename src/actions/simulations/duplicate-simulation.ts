@@ -15,7 +15,7 @@ export async function duplicateSimulation(simulationId: string): Promise<ActionR
 	const supabase = await createClient()
 
 	// 1. Buscar a simulação original
-	const { data: original, error } = await supabase.from("simulations").select("*").eq("id", simulationId).single<Tables<"simulations">>()
+	const { data: original, error } = await supabase.from("simulations").select("*").eq("id", simulationId).is("deleted_at", null).single<Tables<"simulations">>()
 
 	if (error || !original) {
 		console.error("Erro ao buscar simulação para duplicação:", error)

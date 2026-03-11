@@ -34,6 +34,8 @@ export const MembersTable = ({ groupId }: MembersTableProps) => {
 			}))
 		},
 		enabled: Boolean(groupId),
+		refetchInterval: 30_000,
+		refetchIntervalInBackground: false,
 		retry: false
 	})
 

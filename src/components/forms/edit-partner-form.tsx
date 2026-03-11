@@ -7,6 +7,7 @@ import { motion } from "motion/react"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
+import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 
 import { updatePartner } from "@/actions/partners"
 import { Button } from "@/components/ui/button"
@@ -24,6 +25,7 @@ const EditPartnerForm = ({ partner, className }: { partner: Partner; className?:
 	const [step, setStep] = useState(1)
 	const [isFetchingCep, setIsFetchingCep] = useState(false)
 	const queryClient = useQueryClient()
+	const { execute } = useOperationFeedback()
 
 	const form = useForm<EditPartnerData>({
 		resolver: zodResolver(editPartnerSchema),
@@ -93,21 +95,19 @@ const EditPartnerForm = ({ partner, className }: { partner: Partner; className?:
 	}
 
 	async function onSubmit(data: EditPartnerData) {
-		const result = await updatePartner(partner.id, data)
-
-		if (result.success) {
-			toast.success("Dados atualizados com sucesso!")
-			await Promise.all([
-				queryClient.invalidateQueries({ queryKey: ["partners"] }),
-				queryClient.invalidateQueries({ queryKey: ["simulations"] }),
-				queryClient.invalidateQueries({ queryKey: ["orders"] }),
-				queryClient.invalidateQueries({ queryKey: ["customers"] })
-			])
-		} else {
-			toast.error("Erro na atualização", {
-				description: result.message
-			})
-		}
+		execute({
+			action: () => updatePartner(partner.id, data),
+			loadingMessage: "Salvando parceiro...",
+			successMessage: "Dados atualizados com sucesso!",
+			onSuccess: () => {
+				Promise.all([
+					queryClient.invalidateQueries({ queryKey: ["partners"] }),
+					queryClient.invalidateQueries({ queryKey: ["simulations"] }),
+					queryClient.invalidateQueries({ queryKey: ["orders"] }),
+					queryClient.invalidateQueries({ queryKey: ["customers"] })
+				])
+			}
+		})
 	}
 
 	const motionVariants = {

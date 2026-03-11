@@ -33,7 +33,7 @@ async function downloadSimulationFiles({ simulationId, documentNames, customerId
 	const supabase = createAdminClient()
 
 	try {
-		const { data, error } = await supabase.from("customers").select("company_name").eq("id", customerId).single()
+		const { data, error } = await supabase.from("customers").select("company_name").eq("id", customerId).is("deleted_at", null).single()
 
 		if (error) throw error
 

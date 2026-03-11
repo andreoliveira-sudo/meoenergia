@@ -1,14 +1,20 @@
 "use server"
 
 import type { GroupRule } from "@/lib/definitions/groups"
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import type { ActionResponse } from "@/types/action-response"
 
 export default async function deleteGroupRuleAction(ruleId: string): Promise<ActionResponse<GroupRule>> {
 	try {
-		const supabase = await createClient()
+		const supabase = createAdminClient()
 
-		const { data, error } = await supabase.from("group_rules").delete().eq("id", ruleId).select("id, entity, rule_type, target_id, created_at").single()
+		const { data, error } = await supabase
+			.from("group_rules")
+			.update({ deleted_at: new Date().toISOString() })
+			.eq("id", ruleId)
+			.is("deleted_at", null)
+			.select("id, entity, rule_type, target_id, created_at")
+			.single()
 
 		if (error || !data) {
 			return {

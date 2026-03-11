@@ -1,6 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
+import { useMemo } from "react"
 import {
 	getCoreRowModel,
 	getFacetedRowModel,
@@ -21,7 +22,7 @@ import { usePersistedTableState } from "@/hooks/use-persisted-table-state"
 
 const CUSTOMER_TABLE_STORAGE_KEY = "customer-table-state"
 
-export const CustomerTable = () => {
+export const CustomerTable = ({ filterType, dateFrom, dateTo }: { filterType?: "pf" | "pj"; dateFrom?: string; dateTo?: string }) => {
 	const { sorting, setSorting, columnFilters, setColumnFilters, columnVisibility, setColumnVisibility } = usePersistedTableState({
 		storageKey: CUSTOMER_TABLE_STORAGE_KEY,
 		initialState: {
@@ -29,13 +30,32 @@ export const CustomerTable = () => {
 		}
 	})
 
-	const { data, isLoading } = useQuery({
+	const { data: rawData, isLoading } = useQuery({
 		queryKey: ["customers"],
-		queryFn: getCustomersForCurrentUser
+		queryFn: getCustomersForCurrentUser,
+		refetchInterval: 30_000,
+		refetchIntervalInBackground: false
 	})
 
+	const data = useMemo(() => {
+		let filtered = rawData ?? []
+		if (filterType) {
+			filtered = filtered.filter((c) => c.type === filterType)
+		}
+		if (dateFrom || dateTo) {
+			filtered = filtered.filter((c) => {
+				if (!c.created_at) return false
+				const d = new Date(c.created_at); const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+				if (dateFrom && dateStr < dateFrom) return false
+				if (dateTo && dateStr > dateTo) return false
+				return true
+			})
+		}
+		return filtered
+	}, [rawData, filterType, dateFrom, dateTo])
+
 	const table = useReactTable({
-		data: data ?? [],
+		data,
 		columns,
 		state: {
 			sorting,
@@ -55,8 +75,10 @@ export const CustomerTable = () => {
 
 	const columnNameMap: { [key: string]: string } = {
 		kdi: "KDI",
-		company_name: "Razão Social",
-		cnpj: "CNPJ",
+		type: "Tipo",
+		company_name: "Razão Social/Nome",
+		cnpj: "CNPJ/CPF",
+		created_at: "Data de Cadastro",
 		partner_name: "Parceiro",
 		internal_manager_name: "Gestor Interno",
 		city: "Cidade",

@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Trash2, Shield, MoreHorizontal } from 'lucide-react'
-import { toast } from 'sonner'
 
 import {
     Table,
@@ -38,28 +37,26 @@ import {
 
 import { ApiKey } from '@/actions/developer/get-api-keys'
 import revokeApiKey from '@/actions/developer/revoke-api-key'
+import { useOperationFeedback } from '@/components/feedback/operation-feedback'
 
 export default function ApiKeysTable({ initialKeys, onUpdate }: { initialKeys: ApiKey[], onUpdate: () => void }) {
     const [keyToRevoke, setKeyToRevoke] = useState<string | null>(null)
-    const [loading, setLoading] = useState(false)
+    const { execute } = useOperationFeedback()
 
     const handleRevoke = async () => {
         if (!keyToRevoke) return
-        setLoading(true)
-        try {
-            const result = await revokeApiKey(keyToRevoke)
-            if (result.success) {
-                toast.success('Chave revogada com sucesso')
+        execute({
+            action: () => revokeApiKey(keyToRevoke),
+            loadingMessage: 'Revogando chave...',
+            successMessage: 'Chave revogada com sucesso',
+            onSuccess: () => {
                 onUpdate()
-            } else {
-                toast.error(result.message || 'Erro ao revogar chave')
+                setKeyToRevoke(null)
+            },
+            onError: () => {
+                setKeyToRevoke(null)
             }
-        } catch (error) {
-            toast.error('Ocorreu um erro inesperado')
-        } finally {
-            setLoading(false)
-            setKeyToRevoke(null)
-        }
+        })
     }
 
     if (!initialKeys.length) {
@@ -76,11 +73,11 @@ export default function ApiKeysTable({ initialKeys, onUpdate }: { initialKeys: A
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Identificação</TableHead>
+                        <TableHead>Identificacao</TableHead>
                         <TableHead className="w-[150px]">Prefixo</TableHead>
-                        <TableHead>Permissões</TableHead>
+                        <TableHead>Permissoes</TableHead>
                         <TableHead>Criado em</TableHead>
-                        <TableHead>Último uso</TableHead>
+                        <TableHead>Ultimo uso</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
@@ -133,7 +130,7 @@ export default function ApiKeysTable({ initialKeys, onUpdate }: { initialKeys: A
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                        <DropdownMenuLabel>Acoes</DropdownMenuLabel>
                                         <DropdownMenuItem
                                             onClick={() => navigator.clipboard.writeText(key.id)}
                                         >
@@ -159,9 +156,9 @@ export default function ApiKeysTable({ initialKeys, onUpdate }: { initialKeys: A
             <AlertDialog open={!!keyToRevoke} onOpenChange={(val) => !val && setKeyToRevoke(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                        <AlertDialogTitle>Voce tem certeza?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Esta ação não pode ser desfeita. A chave deixará de funcionar imediatamente para qualquer aplicação que a esteja utilizando.
+                            Esta acao nao pode ser desfeita. A chave deixara de funcionar imediatamente para qualquer aplicacao que a esteja utilizando.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -170,7 +167,7 @@ export default function ApiKeysTable({ initialKeys, onUpdate }: { initialKeys: A
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                             onClick={handleRevoke}
                         >
-                            {loading ? 'Revogando...' : 'Sim, revogar'}
+                            Sim, revogar
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

@@ -2,7 +2,7 @@
 "use client"
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { Copy, DollarSign, Download, Edit, Eye, FileDown, Loader2, RefreshCw, Send, Trash2 } from "lucide-react"
+import { Copy, DollarSign, Download, Edit, Eye, FileDown, Loader2, RefreshCw, Send, Trash2, Upload } from "lucide-react"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
 
@@ -14,6 +14,7 @@ import { EditSimulationDialog } from "@/components/dialogs/edit-simulation-dialo
 import { EditSimulationRatesDialog } from "@/components/dialogs/edit-simulation-rates-dialog"
 import { UpdateStatusDialog } from "@/components/dialogs/update-status-dialog"
 import { ViewSimulationSheet } from "@/components/dialogs/view-simulation-sheet"
+import { QuickUploadDialog } from "@/components/dialogs/quick-upload-dialog"
 import { Button } from "@/components/ui/button"
 import {
 	DropdownMenu,
@@ -35,6 +36,7 @@ export const SimulationsTableActions = ({ simulation }: { simulation: Simulation
 	const [isViewSheetOpen, setIsViewSheetOpen] = useState(false)
 	const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false)
 	const [isManageRatesDialogOpen, setIsManageRatesDialogOpen] = useState(false)
+	const [isQuickUploadOpen, setIsQuickUploadOpen] = useState(false)
 	const [isDeletePending, startDeleteTransition] = useTransition()
 	const [isCreateOrderPending, startCreateOrderTransition] = useTransition()
 	const [isPdfPending, startPdfTransition] = useTransition()
@@ -190,6 +192,18 @@ export const SimulationsTableActions = ({ simulation }: { simulation: Simulation
 	return (
 		<>
 			<div className="flex items-center justify-center space-x-1 alternative-buttons">
+				{canCreateSimulations && (
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Button variant="ghost" size="icon" onClick={() => setIsQuickUploadOpen(true)}>
+								<Upload className="h-4 w-4" />
+								<span className="sr-only">Upload Rápido</span>
+							</Button>
+						</TooltipTrigger>
+						<TooltipContent>Upload Rápido de Documentos</TooltipContent>
+					</Tooltip>
+				)}
+
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<Button variant="ghost" size="icon" onClick={() => setIsViewSheetOpen(true)}>
@@ -348,6 +362,7 @@ export const SimulationsTableActions = ({ simulation }: { simulation: Simulation
 			<EditSimulationDialog simulationId={simulation.id} open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} />
 			<ViewSimulationSheet simulationId={simulation.id} open={isViewSheetOpen} onOpenChange={setIsViewSheetOpen} />
 			<UpdateStatusDialog simulation={simulation} open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen} />
+			<QuickUploadDialog simulationId={simulation.id} open={isQuickUploadOpen} onOpenChange={setIsQuickUploadOpen} />
 		</>
 	)
 }

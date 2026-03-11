@@ -13,7 +13,7 @@ async function getCustomerById(id: string): Promise<ActionResponse<Customer | nu
 	try {
 		const supabase = await createClient()
 
-		const { data, error } = await supabase.from("customers").select("*").eq("id", id).single()
+		const { data, error } = await supabase.from("customers").select("*").eq("id", id).is("deleted_at", null).single()
 
 		if (error?.code === "PGRST116") {
 			// RLS deny ou registro não existe - retorna como 404 e loga auditoria

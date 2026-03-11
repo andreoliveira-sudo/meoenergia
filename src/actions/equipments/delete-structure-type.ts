@@ -13,19 +13,14 @@ async function deleteStructureType(structureTypeId: string): Promise<ActionRespo
 	const supabase = createAdminClient()
 
 	try {
-		const { error } = await supabase.from("structure_types").delete().eq("id", structureTypeId)
+		const { error } = await supabase
+			.from("structure_types")
+			.update({ deleted_at: new Date().toISOString() })
+			.eq("id", structureTypeId)
+			.is("deleted_at", null)
 
 		if (error) {
 			console.error("Erro ao deletar tipo de estrutura (Supabase):", error)
-
-			if (error.code === "23503") {
-				// Foreign key violation
-				return {
-					success: false,
-					message: "Não é possível deletar este tipo, pois ele está associado a uma ou mais simulações/pedidos."
-				}
-			}
-
 			return {
 				success: false,
 				message: "Erro ao deletar o tipo de estrutura. Por favor, tente novamente."

@@ -4,6 +4,8 @@ import { updateSession } from "@/lib/supabase/middleware"
 const PUBLIC_ROUTES = [
 	/^\/simulacao($|\/)/, // /simulacao, /simulacao/resultado, etc (página pública - será criada por FRONT-06)
 	/^\/api\/v1\/simulations($|\/)/, // API de simulações públicas
+	/^\/api\/v1\/orders($|\/)/, //  API de criação de pedidos (requer validação de API Key, mas é pública para clientes externos)
+	/^\/api\/v1\// // Todas as outras APIs (requerem API Key)
 ]
 
 export async function middleware(request: NextRequest) {

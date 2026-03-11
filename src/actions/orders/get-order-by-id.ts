@@ -34,6 +34,7 @@ async function getOrderById(orderId: string): Promise<ActionResponse<FullOrderDe
       `
 			)
 			.eq("id", orderId)
+			.is("deleted_at", null)
 			.single()
 
 		if (error?.code === "PGRST116") {

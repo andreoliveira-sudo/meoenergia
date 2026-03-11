@@ -3,7 +3,7 @@
 import { PostgrestError } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
 
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import type { ActionResponse } from "@/types/action-response"
 
 interface DeleteSimulationParams {
@@ -15,17 +15,18 @@ async function deleteSimulation({ simulationId }: DeleteSimulationParams): Promi
 		return { success: false, message: "ID da Simulação não fornecido." }
 	}
 
-	const supabase = await createClient()
+	const supabase = createAdminClient()
 
 	try {
-		// 1. Deletar a simulação
-		// A deleção em cascata (ON DELETE CASCADE) na FK de customer_id cuidaria disso,
-		// mas fazer em dois passos nos dá mais controle sobre a resposta.
-		const { error: simulationError } = await supabase.from("simulations").delete().eq("id", simulationId)
+		const { error } = await supabase
+			.from("simulations")
+			.update({ deleted_at: new Date().toISOString() })
+			.eq("id", simulationId)
+			.is("deleted_at", null)
 
-		if (simulationError) {
-			console.error("Erro ao deletar simulação (Supabase):", simulationError)
-			throw simulationError
+		if (error) {
+			console.error("Erro ao deletar simulação (Supabase):", error)
+			throw error
 		}
 
 		revalidatePath("/dashboard/simulations")

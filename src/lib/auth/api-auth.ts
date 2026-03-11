@@ -1,20 +1,24 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 
-export type ApiScope = 'orders:read' | 'orders:write' | 'partners:read' | 'partners:write' | 'simulations:read' | 'simulations:write' | '*'
+export type ApiScope = 'orders:read' | 'orders:write' | 'partners:read' | 'partners:write' | 'simulations:read' | 'simulations:write' | 'data:read' | 'data:write' | '*'
 
 export async function validateApiKey(req: NextRequest, requiredScope: ApiScope): Promise<{ isValid: boolean, user?: any, error?: string, apiKeyId?: string }> {
     const apiKey = req.headers.get('x-api-key') || req.headers.get('authorization')?.replace('Bearer ', '')
-
-    if (!apiKey) {
+ 
+    if (!apiKey) { 
         return { isValid: false, error: 'API Key missing' }
     }
 
     // Hashcheck
-    const keyHash = crypto.createHash('sha256').update(apiKey).digest('hex')
+    const keyHash = crypto.createHash('sha256').update(apiKey).digest('hex') 
 
-    const supabase = await createClient()
+    // ✅ USAR ADMIN CLIENT EM VEZ DO CLIENT NORMAL
+    const supabase = createAdminClient() 
+  
+    // BUSCAR A CHAVE ESPECÍFICA
     const { data: keyRecord, error } = await supabase
         .from('api_keys')
         .select('*')
@@ -23,25 +27,25 @@ export async function validateApiKey(req: NextRequest, requiredScope: ApiScope):
         .single()
 
     if (error || !keyRecord) {
+        console.log('4. ❌ VALIDAÇÃO FALHOU')
+        console.log('   Erro Supabase:', error?.message || 'Nenhum')
+        console.log('   Chave encontrada:', keyRecord ? 'Sim' : 'Não')
         return { isValid: false, error: 'Invalid API Key' }
-    }
+    } 
 
     // Scope check
-    // If key has '*', it has access to everything
-    // Otherwise check if requiredScope is in scopes array
     // @ts-ignore
-    const scopes = keyRecord.scopes || []
-    if (!scopes.includes('*') && !scopes.includes(requiredScope)) {
+    const scopes = keyRecord.scopes || [] 
+    
+    if (!scopes.includes('*') && !scopes.includes(requiredScope)) { 
         return { isValid: false, error: `Missing scope: ${requiredScope}`, apiKeyId: keyRecord.id }
-    }
+    } 
 
     // Update last_used_at (fire and forget)
     supabase.from('api_keys').update({ last_used_at: new Date().toISOString() }).eq('id', keyRecord.id).then()
 
     return { isValid: true, user: { id: keyRecord.user_id }, apiKeyId: keyRecord.id }
 }
-
-import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function logApiRequest(
     apiKeyId: string | undefined,

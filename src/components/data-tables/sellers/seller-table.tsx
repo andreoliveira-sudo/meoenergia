@@ -13,7 +13,7 @@ import {
 	useReactTable,
 	type VisibilityState
 } from "@tanstack/react-table"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
 import { getSellersForCurrentUser } from "@/actions/sellers"
 import { columns } from "@/components/data-tables/sellers/columns"
@@ -25,7 +25,7 @@ import { usePersistedTableState } from "@/hooks/use-persisted-table-state"
 
 const SELLER_TABLE_STORAGE_KEY = "seller-table-state"
 
-const SellerTable = () => {
+const SellerTable = ({ dateFrom, dateTo }: { dateFrom?: string; dateTo?: string }) => {
 	const [rowSelection, setRowSelection] = useState({})
 
 	const { sorting, setSorting, columnFilters, setColumnFilters, columnVisibility, setColumnVisibility } = usePersistedTableState({
@@ -45,13 +45,29 @@ const SellerTable = () => {
 		}
 	})
 
-	const { data, isLoading } = useQuery({
+	const { data: rawData, isLoading } = useQuery({
 		queryKey: ["sellers"],
-		queryFn: getSellersForCurrentUser
+		queryFn: getSellersForCurrentUser,
+		refetchInterval: 30_000,
+		refetchIntervalInBackground: false
 	})
 
+	const data = useMemo(() => {
+		let filtered = rawData ?? []
+		if (dateFrom || dateTo) {
+			filtered = filtered.filter((s) => {
+				if (!s.created_at) return false
+				const d = new Date(s.created_at); const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+				if (dateFrom && dateStr < dateFrom) return false
+				if (dateTo && dateStr > dateTo) return false
+				return true
+			})
+		}
+		return filtered
+	}, [rawData, dateFrom, dateTo])
+
 	const table = useReactTable({
-		data: data ?? [],
+		data,
 		columns,
 		state: {
 			sorting,

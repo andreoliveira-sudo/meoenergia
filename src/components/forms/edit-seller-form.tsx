@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight, Save } from "lucide-react"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
+import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 
 import { updateSeller } from "@/actions/sellers"
 import { Button } from "@/components/ui/button"
@@ -30,6 +31,7 @@ const EditSellerForm = ({ seller, onFinished, className }: EditSellerFormProps) 
 	const [step, setStep] = useState(1)
 	const [isFetchingCep, setIsFetchingCep] = useState(false)
 	const queryClient = useQueryClient()
+	const { execute } = useOperationFeedback()
 
 	const form = useForm<EditSellerData>({
 		resolver: zodResolver(editSellerSchema),
@@ -94,17 +96,15 @@ const EditSellerForm = ({ seller, onFinished, className }: EditSellerFormProps) 
 	}
 
 	async function onSubmit(data: EditSellerData) {
-		const result = await updateSeller(seller.id, data)
-
-		if (result.success) {
-			toast.success(result.message)
-			queryClient.invalidateQueries({ queryKey: ["sellers"] })
-			onFinished()
-		} else {
-			toast.error("Erro na atualização", {
-				description: result.message
-			})
-		}
+		execute({
+			action: () => updateSeller(seller.id, data),
+			loadingMessage: "Salvando vendedor...",
+			successMessage: (res) => res.message,
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: ["sellers"] })
+				onFinished()
+			}
+		})
 	}
 
 	const motionVariants = {

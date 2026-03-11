@@ -47,7 +47,10 @@ export const columns: ColumnDef<Seller>[] = [
 				</Button>
 			)
 		},
-		cell: ({ row }) => <div className="text-left">{row.getValue("name")}</div>
+		cell: ({ row }) => {
+			const name = (row.getValue("name") as string) || ""
+			return <div className="text-left font-medium">{name.toUpperCase()}</div>
+		}
 	},
 	{
 		accessorKey: "email",

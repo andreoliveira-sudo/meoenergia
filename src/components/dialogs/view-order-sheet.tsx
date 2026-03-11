@@ -82,9 +82,7 @@ export function ViewOrderSheet({ orderId, open, onOpenChange }: ViewOrderSheetPr
 	} = useQuery({
 		queryKey: ["order-details", orderId],
 		queryFn: () => getOrderById(orderId),
-		enabled: open,
-		staleTime: 5 * 60 * 1000,
-		refetchOnWindowFocus: false
+		enabled: open
 	})
 
 	// Query order history

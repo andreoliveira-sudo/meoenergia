@@ -3,12 +3,12 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Loader2, UserPlus } from "lucide-react"
-import { useState, useTransition } from "react"
+import { useState } from "react"
 import { useForm } from "react-hook-form"
-import { toast } from "sonner"
 
 import { addGroupMemberAction } from "@/actions/groups"
 import getAllUsersAction from "@/actions/users/get-all-users-action"
+import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -33,8 +33,8 @@ const roleOptions: { value: string; label: string }[] = [
 
 export const CreateMemberDialog = ({ groupId }: CreateMemberDialogProps) => {
 	const [open, setOpen] = useState(false)
-	const [isPending, startTransition] = useTransition()
 	const queryClient = useQueryClient()
+	const { execute } = useOperationFeedback()
 
 	const form = useForm<CreateMemberSchema>({
 		resolver: zodResolver(createMemberSchema),
@@ -70,21 +70,17 @@ export const CreateMemberDialog = ({ groupId }: CreateMemberDialogProps) => {
 	}
 
 	const onSubmit = (values: CreateMemberSchema) => {
-		startTransition(async () => {
-			const result = await addGroupMemberAction({
+		execute({
+			action: () => addGroupMemberAction({
 				groupId,
 				userId: values.user_id,
 				role: values.role
-			})
-
-			if (result.success) {
-				toast.success("Membro adicionado com sucesso")
-				await queryClient.invalidateQueries({ queryKey: ["group-members", groupId] })
+			}),
+			loadingMessage: "Adicionando membro...",
+			successMessage: "Membro adicionado com sucesso",
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: ["group-members", groupId] })
 				handleOpenChange(false)
-			} else {
-				toast.error("Erro ao adicionar membro", {
-					description: result.message
-				})
 			}
 		})
 	}
@@ -112,7 +108,7 @@ export const CreateMemberDialog = ({ groupId }: CreateMemberDialogProps) => {
 								<FormItem>
 									<FormLabel>Usuario</FormLabel>
 									<FormControl>
-										<Select onValueChange={field.onChange} value={field.value || undefined} disabled={isPending || isLoadingUsers}>
+										<Select onValueChange={field.onChange} value={field.value || undefined} disabled={isLoadingUsers}>
 											<SelectTrigger>
 												<SelectValue placeholder={isLoadingUsers ? "Carregando usuarios..." : "Selecione um usuario"} />
 											</SelectTrigger>
@@ -150,7 +146,7 @@ export const CreateMemberDialog = ({ groupId }: CreateMemberDialogProps) => {
 								<FormItem>
 									<FormLabel>Papel</FormLabel>
 									<FormControl>
-										<Select onValueChange={field.onChange} value={field.value || undefined} disabled={isPending}>
+										<Select onValueChange={field.onChange} value={field.value || undefined}>
 											<SelectTrigger>
 												<SelectValue placeholder="Selecione o papel" />
 											</SelectTrigger>
@@ -169,11 +165,10 @@ export const CreateMemberDialog = ({ groupId }: CreateMemberDialogProps) => {
 						/>
 
 						<DialogFooter className="pt-2">
-							<Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={isPending}>
+							<Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
 								Cancelar
 							</Button>
-							<Button type="submit" disabled={isPending}>
-								{isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+							<Button type="submit">
 								Adicionar
 							</Button>
 						</DialogFooter>
