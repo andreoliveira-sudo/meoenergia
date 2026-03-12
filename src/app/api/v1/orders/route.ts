@@ -293,7 +293,7 @@ export async function POST(request: NextRequest) {
                                'number', 'neighborhood', 'city', 'state', 'current_consumption',
                                'monthly_bill_value', 'system_power', 'equipment_value', 'labor_value']
         
-        const missingFields = requiredFields.filter(field => !body[field])
+        const missingFields = requiredFields.filter(field => body[field] === undefined || body[field] === null || body[field] === '')
         if (missingFields.length > 0) {
             status = 400
             return NextResponse.json(
