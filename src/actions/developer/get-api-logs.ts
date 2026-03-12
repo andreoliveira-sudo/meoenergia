@@ -1,5 +1,6 @@
 'use server'
 
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { ActionResponse } from '@/types/action-response'
 
@@ -15,15 +16,18 @@ export interface ApiLog {
 }
 
 export default async function getApiLogs(): Promise<ActionResponse<ApiLog[]>> {
-    const supabase = await createClient()
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Verificar autenticação com client do usuário
+    const userClient = await createClient()
+    const { data: { user }, error: authError } = await userClient.auth.getUser()
     if (authError || !user) {
         return { success: false, message: 'Usuário não autenticado.' }
     }
 
     try {
-        const { data: logs, error } = await (supabase as any)
+        // Usar admin client para bypass RLS (api_logs não tem policy de leitura)
+        const supabase = createAdminClient() as any
+
+        const { data: logs, error } = await supabase
             .from('api_logs')
             .select(`
                 id,
