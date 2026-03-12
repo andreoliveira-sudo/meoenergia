@@ -353,8 +353,8 @@ async function updateOrder({ orderId, customerId, data }: UpdateOrderParams): Pr
 
 	try {
 		// 1. Buscar dados ATUAIS do cliente para UPDATE
-		const { data: currentCustomer, error: customerFetchError } = await supabaseAdmin
-			.from("customers")
+		const { data: currentCustomer, error: customerFetchError } = await (supabaseAdmin
+			.from("customers") as any)
 			.select("*")
 			.eq("id", customerId)
 			.single()
