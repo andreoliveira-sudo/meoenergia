@@ -87,8 +87,8 @@ async function sendOrderUpdatedWebhook(apiKeyId: string, orderId: string) {
 		const supabaseAdmin = createAdminClient()
 
 		// Buscar webhook_url da API Key
-		const { data: apiKeyData } = await supabaseAdmin
-			.from('api_keys')
+		const { data: apiKeyData } = await (supabaseAdmin
+			.from('api_keys') as any)
 			.select('webhook_url, name')
 			.eq('id', apiKeyId)
 			.single()
@@ -104,8 +104,8 @@ async function sendOrderUpdatedWebhook(apiKeyId: string, orderId: string) {
 		const pjRates = pjRatesResponse.success ? pjRatesResponse.data : null
 
 		// Buscar dados COMPLETOS do pedido - EXATAMENTE como no updateOrderStatus
-		const { data: fullOrderData } = await supabaseAdmin
-			.from("orders")
+		const { data: fullOrderData } = await (supabaseAdmin
+			.from("orders") as any)
 			.select(`
 				id,
 				kdi,
@@ -314,7 +314,7 @@ async function sendOrderUpdatedWebhook(apiKeyId: string, orderId: string) {
 		})
 
 		// Log do resultado
-		await supabaseAdmin.from('api_key_webhook_logs').insert({
+		await (supabaseAdmin as any).from('api_key_webhook_logs').insert({
 			api_key_id: apiKeyId,
 			url: apiKeyData.webhook_url,
 			event_type: 'order.updated',
@@ -330,7 +330,7 @@ async function sendOrderUpdatedWebhook(apiKeyId: string, orderId: string) {
 		console.error('Erro ao enviar webhook de atualização:', error)
 
 		const supabaseAdmin = createAdminClient()
-		await supabaseAdmin.from('api_key_webhook_logs').insert({
+		await (supabaseAdmin as any).from('api_key_webhook_logs').insert({
 			api_key_id: apiKeyId,
 			url: 'unknown',
 			event_type: 'order.updated',
@@ -365,8 +365,8 @@ async function updateOrder({ orderId, customerId, data }: UpdateOrderParams): Pr
 		}
 
 		// 2. Buscar dados ATUAIS do pedido para UPDATE
-		const { data: currentOrder, error: orderFetchError } = await supabaseAdmin
-			.from("orders")
+		const { data: currentOrder, error: orderFetchError } = await (supabaseAdmin
+			.from("orders") as any)
 			.select(`
 				id,
 				api_key_id,
