@@ -27,17 +27,10 @@ export default async function getApiLogs(): Promise<ActionResponse<ApiLog[]>> {
         // Usar admin client para bypass RLS (api_logs não tem policy de leitura)
         const supabase = createAdminClient() as any
 
+        // Buscar logs sem join (evita falha se FK não existe no PostgREST)
         const { data: logs, error } = await supabase
             .from('api_logs')
-            .select(`
-                id,
-                method,
-                path,
-                status_code,
-                duration_ms,
-                created_at,
-                api_keys ( name, key_prefix )
-            `)
+            .select('id, api_key_id, method, path, status_code, duration_ms, created_at')
             .order('created_at', { ascending: false })
             .limit(500)
 
@@ -50,16 +43,36 @@ export default async function getApiLogs(): Promise<ActionResponse<ApiLog[]>> {
             return { success: true, message: 'Nenhum log encontrado.', data: [] }
         }
 
-        const mapped: ApiLog[] = logs.map((log: any) => ({
-            id: log.id,
-            method: log.method || 'GET',
-            path: log.path || '',
-            status_code: log.status_code || 0,
-            duration_ms: log.duration_ms ?? null,
-            created_at: log.created_at,
-            api_key_name: log.api_keys?.name || null,
-            api_key_prefix: log.api_keys?.key_prefix || null,
-        }))
+        // Buscar api_keys separadamente para lookup
+        const keyIds = [...new Set(logs.map((l: any) => l.api_key_id).filter(Boolean))]
+        let keysMap: Record<string, { name: string; key_prefix: string }> = {}
+
+        if (keyIds.length > 0) {
+            const { data: keys } = await supabase
+                .from('api_keys')
+                .select('id, name, key_prefix')
+                .in('id', keyIds)
+
+            if (keys) {
+                keysMap = Object.fromEntries(
+                    keys.map((k: any) => [k.id, { name: k.name, key_prefix: k.key_prefix }])
+                )
+            }
+        }
+
+        const mapped: ApiLog[] = logs.map((log: any) => {
+            const key = keysMap[log.api_key_id] || null
+            return {
+                id: log.id,
+                method: log.method || 'GET',
+                path: log.path || '',
+                status_code: log.status_code || 0,
+                duration_ms: log.duration_ms ?? null,
+                created_at: log.created_at,
+                api_key_name: key?.name || null,
+                api_key_prefix: key?.key_prefix || null,
+            }
+        })
 
         return { success: true, message: 'Logs carregados com sucesso', data: mapped }
     } catch (error) {
