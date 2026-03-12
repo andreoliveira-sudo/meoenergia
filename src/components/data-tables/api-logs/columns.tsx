@@ -6,7 +6,13 @@ import { ArrowUpDown } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import type { ApiLog } from "@/actions/developer/get-api-logs"
-import { formatDate } from "@/lib/utils"
+import { format } from "date-fns"
+
+function formatTimestamp(dateString: string): string {
+	if (!dateString) return ""
+	const date = new Date(dateString)
+	return format(date, "dd/MM/yyyy HH:mm:ss")
+}
 
 export const columns: ColumnDef<ApiLog>[] = [
 	{
@@ -19,7 +25,7 @@ export const columns: ColumnDef<ApiLog>[] = [
 		),
 		cell: ({ row }) => {
 			const date = row.getValue("created_at") as string
-			return <span className="whitespace-nowrap font-mono text-xs">{formatDate(date)}</span>
+			return <span className="whitespace-nowrap font-mono text-xs">{formatTimestamp(date)}</span>
 		}
 	},
 	{
