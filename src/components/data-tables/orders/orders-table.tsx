@@ -17,6 +17,7 @@ import { OrdersTableToolbar } from "@/components/data-tables/orders/orders-table
 import { DataTable } from "@/components/ui/data-table"
 import { DataTableSkeleton } from "@/components/ui/data-table-skeleton"
 import { DataTableViewOptions } from "@/components/ui/data-table-view-options"
+import { usePersistedTableState } from "@/hooks/use-persisted-table-state"
 
 export const OrdersTable = ({
 	filterId,
@@ -31,9 +32,14 @@ export const OrdersTable = ({
 	dateTo?: string
 	filterStatus?: string
 }) => {
-	// Estado da tabela
-	const [sorting, setSorting] = useState<SortingState>([{ id: "created_at", desc: true }])
-	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+	// Estado da tabela com persistência
+	const { sorting, setSorting, columnVisibility, setColumnVisibility } = usePersistedTableState({
+		storageKey: `meo-table-orders${filterType ? `-${filterType}` : ""}`,
+		initialState: {
+			sorting: [{ id: "created_at", desc: true }],
+			columnVisibility: {}
+		}
+	})
 	const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 })
 
 	// Filtros server-side

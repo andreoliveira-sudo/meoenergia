@@ -2,23 +2,21 @@
 
 import { useQuery } from "@tanstack/react-query"
 import {
-	type ColumnFiltersState,
 	getCoreRowModel,
 	getFacetedRowModel,
 	getFacetedUniqueValues,
 	getFilteredRowModel,
 	getPaginationRowModel,
 	getSortedRowModel,
-	type SortingState,
-	useReactTable,
-	type VisibilityState
+	useReactTable
 } from "@tanstack/react-table"
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 
 import { getGroupRulesAction } from "@/actions/groups"
 import { DataTable } from "@/components/ui/data-table"
 import { DataTableSkeleton } from "@/components/ui/data-table-skeleton"
 import { DataTableViewOptions } from "@/components/ui/data-table-view-options"
+import { usePersistedTableState } from "@/hooks/use-persisted-table-state"
 
 import { rulesColumns } from "./rules-columns"
 import { RulesTableToolbar } from "./rules-table-toolbar"
@@ -29,9 +27,13 @@ interface RulesTableProps {
 }
 
 export const RulesTable = ({ groupId }: RulesTableProps) => {
-	const [sorting, setSorting] = useState<SortingState>([{ id: "created_at", desc: true }])
-	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+	const { sorting, setSorting, columnFilters, setColumnFilters, columnVisibility, setColumnVisibility } = usePersistedTableState({
+		storageKey: "meo-table-group-rules",
+		initialState: {
+			sorting: [{ id: "created_at", desc: true }],
+			columnVisibility: {}
+		}
+	})
 
 	const { data, isLoading } = useQuery<GroupRuleRow[]>({
 		queryKey: ["group-rules", groupId],

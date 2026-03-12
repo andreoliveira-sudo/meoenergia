@@ -17,6 +17,7 @@ import { useEffect, useMemo, useState } from "react"
 import { hasPermission } from "@/actions/auth"
 import { getAllUsers } from "@/actions/users"
 import { columns } from "@/components/data-tables/users/users-columns"
+import { usePersistedTableState } from "@/hooks/use-persisted-table-state"
 import { Badge } from "@/components/ui/badge"
 import { DataTable } from "@/components/ui/data-table"
 import { DataTableSkeleton } from "@/components/ui/data-table-skeleton"
@@ -24,10 +25,12 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 const UsersTable = () => {
-	const [sorting, setSorting] = useState<SortingState>([{ id: "created_at", desc: true }])
-	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
-		id: false
+	const { sorting, setSorting, columnFilters, setColumnFilters, columnVisibility, setColumnVisibility } = usePersistedTableState({
+		storageKey: "meo-table-users",
+		initialState: {
+			sorting: [{ id: "created_at", desc: true }],
+			columnVisibility: { id: false }
+		}
 	})
 	const [canManageUsers, setCanManageUsers] = useState(false)
 	const [statusFilter, setStatusFilter] = useState<string>("all")

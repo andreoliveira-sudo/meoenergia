@@ -2,31 +2,28 @@
 
 import { useQuery } from "@tanstack/react-query"
 import {
-	type ColumnFiltersState,
 	getCoreRowModel,
 	getFilteredRowModel,
 	getPaginationRowModel,
 	getSortedRowModel,
-	type SortingState,
-	useReactTable,
-	type VisibilityState
+	useReactTable
 } from "@tanstack/react-table"
-import { useState } from "react"
-
 import { getStructureTypes } from "@/actions/equipments"
 import { DataTable } from "@/components/ui/data-table"
 import { DataTableSkeleton } from "@/components/ui/data-table-skeleton"
 import { Input } from "@/components/ui/input"
+import { usePersistedTableState } from "@/hooks/use-persisted-table-state"
 import type { StructureType } from "@/lib/definitions/equipments"
 import { columns } from "./structure-types-columns"
 
 const StructureTypesTable = () => {
-	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
-		id: false,
-		updated_at: false
+	const { sorting, setSorting, columnFilters, setColumnFilters, columnVisibility, setColumnVisibility } = usePersistedTableState({
+		storageKey: "meo-table-structure-types",
+		initialState: {
+			sorting: [],
+			columnVisibility: { id: false, updated_at: false }
+		}
 	})
-	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-	const [sorting, setSorting] = useState<SortingState>([])
 
 	const { data, isLoading } = useQuery<StructureType[]>({
 		queryKey: ["structure-types"],

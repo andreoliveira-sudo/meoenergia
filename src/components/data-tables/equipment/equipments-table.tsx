@@ -2,28 +2,28 @@
 
 import { useQuery } from "@tanstack/react-query"
 import {
-	type ColumnFiltersState,
 	getCoreRowModel,
 	getFilteredRowModel,
 	getPaginationRowModel,
 	getSortedRowModel,
-	type SortingState,
-	useReactTable,
-	type VisibilityState
+	useReactTable
 } from "@tanstack/react-table"
-import { useState } from "react"
-
 import { getAllEquipments } from "@/actions/equipments"
 import { DataTable } from "@/components/ui/data-table"
 import { DataTableSkeleton } from "@/components/ui/data-table-skeleton"
 import { Input } from "@/components/ui/input"
+import { usePersistedTableState } from "@/hooks/use-persisted-table-state"
 import type { EquipmentWithRelations } from "@/lib/definitions/equipments"
 import { columns } from "./equipments-columns"
 
 const EquipmentsTable = () => {
-	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
-	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-	const [sorting, setSorting] = useState<SortingState>([{ id: "created_at", desc: true }])
+	const { sorting, setSorting, columnFilters, setColumnFilters, columnVisibility, setColumnVisibility } = usePersistedTableState({
+		storageKey: "meo-table-equipments",
+		initialState: {
+			sorting: [{ id: "created_at", desc: true }],
+			columnVisibility: {}
+		}
+	})
 
 	const { data, isLoading } = useQuery<EquipmentWithRelations[]>({
 		queryKey: ["equipments"],

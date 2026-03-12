@@ -1,7 +1,7 @@
 "use client"
 
-import { type ColumnFiltersState, type SortingState, type VisibilityState } from "@tanstack/react-table"
-import { useEffect, useState } from "react"
+import { type ColumnFiltersState, type SortingState, type VisibilityState, type Updater } from "@tanstack/react-table"
+import { useEffect, useRef, useState } from "react"
 
 interface PersistedTableState {
 	sorting: SortingState
@@ -9,12 +9,33 @@ interface PersistedTableState {
 	columnVisibility: VisibilityState
 }
 
-export function usePersistedTableState<TData>({ storageKey, initialState }: { storageKey: string; initialState: Partial<PersistedTableState> }) {
-	// Initialize with defaults to match server-side rendering
-	const [sorting, setSorting] = useState<SortingState>(initialState.sorting || [])
-	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(initialState.columnFilters || [])
-	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(initialState.columnVisibility || {})
+const IGNORED_FILTER_COLUMNS = ["customer_type", "customers_type"]
+
+function applyUpdater<T>(updater: Updater<T>, current: T): T {
+	return typeof updater === "function" ? (updater as (old: T) => T)(current) : updater
+}
+
+export function usePersistedTableState<TData>({
+	storageKey,
+	initialState
+}: {
+	storageKey: string
+	initialState: Partial<PersistedTableState>
+}) {
+	const [sorting, setSortingRaw] = useState<SortingState>(initialState.sorting || [])
+	const [columnFilters, setColumnFiltersRaw] = useState<ColumnFiltersState>(initialState.columnFilters || [])
+	const [columnVisibility, setColumnVisibilityRaw] = useState<VisibilityState>(initialState.columnVisibility || {})
 	const [isLoaded, setIsLoaded] = useState(false)
+	const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+	const setSorting = (updater: Updater<SortingState>) =>
+		setSortingRaw((current) => applyUpdater(updater, current))
+
+	const setColumnFilters = (updater: Updater<ColumnFiltersState>) =>
+		setColumnFiltersRaw((current) => applyUpdater(updater, current))
+
+	const setColumnVisibility = (updater: Updater<VisibilityState>) =>
+		setColumnVisibilityRaw((current) => applyUpdater(updater, current))
 
 	// One-time load from localStorage on mount
 	useEffect(() => {
@@ -24,41 +45,53 @@ export function usePersistedTableState<TData>({ storageKey, initialState }: { st
 		if (saved) {
 			try {
 				const state: PersistedTableState = JSON.parse(saved)
-				if (state.sorting) setSorting(state.sorting)
-				if (state.columnFilters) setColumnFilters(state.columnFilters)
-				// Merge saved visibility with initial visibility to ensure new columns appear by default
+				if (state.sorting) setSortingRaw(state.sorting)
+				if (state.columnFilters) {
+					const cleanFilters = state.columnFilters.filter(
+						(f) => !IGNORED_FILTER_COLUMNS.includes(f.id)
+					)
+					setColumnFiltersRaw(cleanFilters)
+				}
 				if (state.columnVisibility) {
-					setColumnVisibility((prev) => ({
+					setColumnVisibilityRaw((prev) => ({
 						...prev,
-						...state.columnVisibility,
+						...state.columnVisibility
 					}))
 				}
 			} catch (error) {
 				console.error("Failed to parse table state:", error)
+				window.localStorage.removeItem(storageKey)
 			}
 		}
 		setIsLoaded(true)
 	}, [storageKey])
 
-	// Sync changes to localStorage, ONLY after initial load is complete
+	// Sync to localStorage com debounce — evita travar a cada keystroke
 	useEffect(() => {
 		if (!isLoaded) return
 
-		const stateToSave: PersistedTableState = {
-			sorting,
-			columnFilters,
-			columnVisibility,
+		if (debounceRef.current) clearTimeout(debounceRef.current)
+
+		debounceRef.current = setTimeout(() => {
+			const stateToSave: PersistedTableState = {
+				sorting,
+				columnFilters,
+				columnVisibility
+			}
+			window.localStorage.setItem(storageKey, JSON.stringify(stateToSave))
+		}, 500)
+
+		return () => {
+			if (debounceRef.current) clearTimeout(debounceRef.current)
 		}
-		window.localStorage.setItem(storageKey, JSON.stringify(stateToSave))
 	}, [sorting, columnFilters, columnVisibility, storageKey, isLoaded])
 
-	// Return state - standard React Table expects these exact shapes
 	return {
 		sorting,
 		setSorting,
 		columnFilters,
 		setColumnFilters,
 		columnVisibility,
-		setColumnVisibility,
+		setColumnVisibility
 	}
 }
