@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react"
-import { Activity, BarChart3, Bell, Code, DollarSign, FileText, Home, LayoutList, Package, Plug, Settings, Shield, User } from "lucide-react"
+import { Activity, BarChart3, Bell, Code, DollarSign, FileText, Home, LayoutList, List, Package, Plug, Settings, Shield, User } from "lucide-react"
 
 interface SubNavItem {
 	title: string
@@ -121,7 +121,8 @@ const navItems: NavSection[] = [
 					{ title: "Taxas e Par\u00e2metros", url: "/dashboard/admin/settings/rates", permission: "admin:settings:manage" },
 					{ title: "Permiss\u00f5es", url: "/dashboard/admin/users", permission: "admin:users:view" },
 					{ title: "Notifica\u00e7\u00f5es", url: "/dashboard/admin/settings/notifications" },
-					{ title: "API & Integra\u00e7\u00f5es", url: "/dashboard/developer", permission: "admin:settings:manage" }
+					{ title: "API & Integra\u00e7\u00f5es", url: "/dashboard/developer", permission: "admin:settings:manage" },
+					{ title: "Registros de API", url: "/dashboard/developer/logs", permission: "admin:settings:manage" }
 				]
 			}
 		]
