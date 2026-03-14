@@ -124,7 +124,14 @@ export async function GET(request: Request) {
         browser = await puppeteer.launch({
           headless: true,
           executablePath: getChromePath(),
-          args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-gpu"],
+          args: [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-gpu",
+            "--disable-dev-shm-usage",
+            "--disable-software-rasterizer",
+            "--single-process",
+          ],
         });
 
         const page = await browser.newPage();
