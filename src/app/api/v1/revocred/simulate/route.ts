@@ -122,7 +122,7 @@ export async function GET(request: Request) {
         sendEvent("launch_browser", "running", "Iniciando navegador...");
 
         browser = await puppeteer.launch({
-          headless: true,
+          headless: "new" as unknown as boolean,
           executablePath: getChromePath(),
           args: [
             "--no-sandbox",
@@ -130,7 +130,9 @@ export async function GET(request: Request) {
             "--disable-gpu",
             "--disable-dev-shm-usage",
             "--disable-software-rasterizer",
-            "--single-process",
+            "--no-zygote",
+            "--disable-crash-reporter",
+            "--disable-breakpad",
           ],
         });
 
