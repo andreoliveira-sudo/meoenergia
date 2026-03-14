@@ -1060,6 +1060,56 @@ export default function RevocredModal() {
                 </div>
               )}
 
+              {/* Batch running but no local orders (admin re-entered) — show stop button */}
+              {batchRunning && batchOrders.length === 0 && (
+                <div className="mb-4 p-3 bg-blue-50 rounded-xl border border-blue-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm text-blue-700">
+                      <Server className="w-4 h-4 animate-pulse" />
+                      <div>
+                        <span className="font-medium">Integração em andamento</span>
+                        {activityOwner && (
+                          <span className="text-xs text-blue-500 ml-1">(por {activityOwner})</span>
+                        )}
+                        {batchCycleCount > 0 && (
+                          <span className="text-xs text-blue-500 ml-2">— {batchCycleCount} processado{batchCycleCount !== 1 ? "s" : ""}</span>
+                        )}
+                        {batchCurrentKdi && (
+                          <span className="text-xs text-blue-400 ml-2">| Atual: {batchCurrentKdi}</span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={stopBatch}
+                      className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
+                    >
+                      <Square className="w-3.5 h-3.5" />
+                      Parar
+                    </button>
+                  </div>
+                  {batchNextRunAt && (
+                    <p className="text-xs text-blue-400 mt-1">Próximo ciclo: {batchNextRunAt}</p>
+                  )}
+                  {/* Show results if any */}
+                  {batchResults.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-blue-200 space-y-0.5">
+                      <p className="text-xs font-medium text-blue-600 mb-1">Resultados:</p>
+                      {batchResults.map((r) => (
+                        <div key={r.kdi} className="flex items-center gap-2 text-xs text-blue-600">
+                          <span className="font-mono">{r.kdi}</span>
+                          <span className="truncate flex-1">{r.customerName}</span>
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                            r.resultado === "APROVADO" ? "bg-green-100 text-green-700" :
+                            r.resultado === "REPROVADO" ? "bg-red-100 text-red-700" :
+                            "bg-gray-100 text-gray-600"
+                          }`}>{r.resultado}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Orders found */}
               {batchOrders.length > 0 && (
                 <div className="mb-4 p-3 bg-gray-50 rounded-xl border border-gray-100">
