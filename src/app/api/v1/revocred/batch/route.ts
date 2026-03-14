@@ -38,6 +38,7 @@ export async function POST(request: Request) {
       batchStepDelay: (body.batchStepDelay as number) || 3,
       batchInterval: (body.batchInterval as number) || 5,
       totalOrders: (body.totalOrders as number) || 0,
+      useCurrentDate: (body.useCurrentDate as boolean) || false,
     });
 
     if (!result.success) {

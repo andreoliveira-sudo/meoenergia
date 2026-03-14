@@ -59,6 +59,7 @@ export interface BatchState {
   currentSteps: StepEntry[];
   error: string | null;
   startedAt: string | null;
+  useCurrentDate: boolean;
 }
 
 /* ─── Global Singleton (survives across HTTP requests in same Node.js process) ─── */
@@ -86,6 +87,7 @@ const DEFAULT_STATE: BatchState = {
   currentSteps: [],
   error: null,
   startedAt: null,
+  useCurrentDate: false,
 };
 
 function getState(): BatchState {
@@ -359,8 +361,15 @@ async function runBatchLoop() {
     while (!g.__batchAbort) {
       try {
         // 1. Fresh fetch — re-query DB each iteration to capture new orders
+        // If useCurrentDate is enabled, always use today's date (auto-advances at midnight)
+        const effectiveDate = state.useCurrentDate
+          ? new Date().toISOString().slice(0, 10)
+          : state.batchDate;
+        if (state.useCurrentDate) {
+          state.batchDate = effectiveDate; // keep state in sync for UI display
+        }
         const freshOrders = await fetchPendingOrders(
-          state.batchDate,
+          effectiveDate,
           state.batchStatusFilter
         );
         if (g.__batchAbort) break;
@@ -553,6 +562,7 @@ export function startBatch(params: {
   batchStepDelay: number;
   batchInterval: number;
   totalOrders: number;
+  useCurrentDate?: boolean;
 }): { success: boolean; error?: string } {
   if (isRunning()) {
     const state = getState();
@@ -573,6 +583,7 @@ export function startBatch(params: {
     batchInterval: params.batchInterval,
     totalOrders: params.totalOrders,
     startedAt: new Date().toISOString(),
+    useCurrentDate: params.useCurrentDate || false,
   });
 
   g.__batchAbort = false;

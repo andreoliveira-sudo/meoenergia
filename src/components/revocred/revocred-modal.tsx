@@ -150,6 +150,7 @@ export default function RevocredModal() {
 
   // ─── Batch mode state ───
   const [batchDate, setBatchDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [useCurrentDate, setUseCurrentDate] = useState(true); // default: always use today
   const [batchStatus, setBatchStatus] = useState("analysis_pending");
   const [batchStepDelay, setBatchStepDelay] = useState(3);
   const [batchInterval, setBatchInterval] = useState(5);
@@ -228,6 +229,7 @@ export default function RevocredModal() {
       if (isActive) {
         if (data.batchDate) setBatchDate(data.batchDate);
         if (data.batchStatusFilter) setBatchStatus(data.batchStatusFilter);
+        if (data.useCurrentDate !== undefined) setUseCurrentDate(data.useCurrentDate);
         setTab("batch");
       }
     } catch {
@@ -669,11 +671,12 @@ export default function RevocredModal() {
         body: JSON.stringify({
           action: "start",
           startedBy: currentUserName,
-          batchDate: batchDateRef.current,
+          batchDate: useCurrentDate ? new Date().toISOString().slice(0, 10) : batchDateRef.current,
           batchStatusFilter: batchStatusRef.current,
           batchStepDelay: batchStepDelay,
           batchInterval: batchInterval,
           totalOrders: batchOrders.length,
+          useCurrentDate: useCurrentDate,
         }),
       });
       const data = await res.json();
@@ -932,10 +935,33 @@ export default function RevocredModal() {
                   <input
                     type="date"
                     value={batchDate}
-                    onChange={(e) => { setBatchDate(e.target.value); setBatchOrders([]); setBatchResults([]); }}
-                    disabled={batchRunning}
-                    className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
+                    onChange={(e) => { setBatchDate(e.target.value); setUseCurrentDate(false); setBatchOrders([]); setBatchResults([]); }}
+                    disabled={batchRunning || useCurrentDate}
+                    className={`px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 ${useCurrentDate ? "bg-green-50 border-green-200" : ""}`}
                   />
+                  <label
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border cursor-pointer select-none transition-all ${
+                      useCurrentDate
+                        ? "bg-green-50 border-green-300 text-green-700"
+                        : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
+                    } ${batchRunning ? "opacity-50 cursor-not-allowed" : ""}`}
+                    title="Sempre usa a data de hoje. Ao virar o dia, captura automaticamente os pedidos do novo dia."
+                  >
+                    <input
+                      type="checkbox"
+                      checked={useCurrentDate}
+                      onChange={(e) => {
+                        if (batchRunning) return;
+                        setUseCurrentDate(e.target.checked);
+                        if (e.target.checked) {
+                          setBatchDate(new Date().toISOString().slice(0, 10));
+                        }
+                      }}
+                      disabled={batchRunning}
+                      className="w-3.5 h-3.5 rounded border-gray-300 text-green-600 focus:ring-green-500 accent-green-600"
+                    />
+                    Hoje
+                  </label>
                   <button
                     onClick={fetchPendingOrders}
                     disabled={batchRunning || batchLoading}
