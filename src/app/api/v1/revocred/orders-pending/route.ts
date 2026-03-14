@@ -28,6 +28,7 @@ export async function GET(request: Request) {
     .from("orders")
     .select("kdi, status, created_at, system_power, equipment_value, labor_value, monthly_bill_value, customers(name, cpf, cnpj)")
     .eq("status", status)
+    .is("deleted_at", null)
     .gte("created_at", dateFrom)
     .lte("created_at", dateTo)
     .order("created_at", { ascending: true });

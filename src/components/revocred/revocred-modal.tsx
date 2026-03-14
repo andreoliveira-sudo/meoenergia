@@ -155,6 +155,7 @@ export default function RevocredModal() {
   const [batchInterval, setBatchInterval] = useState(5);
   const [batchOrders, setBatchOrders] = useState<PendingOrder[]>([]);
   const [batchResults, setBatchResults] = useState<BatchResult[]>([]);
+  const batchResultsRef = useRef<BatchResult[]>([]);
   const [batchRunning, setBatchRunning] = useState(false);
   // batchAutoRepeat removed — interval always applies between orders
   const [batchCurrentKdi, setBatchCurrentKdi] = useState("");
@@ -864,19 +865,20 @@ export default function RevocredModal() {
         detail: res.detail || (res.resultado !== "APROVADO" ? `Original: ${res.resultado}` : ""),
       };
 
-      setBatchResults((prev) => [
-        ...prev.filter((r) => r.kdi !== order.kdi),
-        resultEntry,
-      ]);
+      setBatchResults((prev) => {
+        const updated = [...prev.filter((r) => r.kdi !== order.kdi), resultEntry];
+        batchResultsRef.current = updated;
+        return updated;
+      });
 
       processedKdis.add(order.kdi);
       orderIndex++;
       setBatchCycleCount(orderIndex);
 
-      // Update activity with results
+      // Update activity with results (use ref to avoid stale closure)
       updateActivityState({
         processed_count: orderIndex,
-        results: [...batchResults.filter((r) => r.kdi !== order.kdi), resultEntry],
+        results: batchResultsRef.current,
       });
 
       if (batchAbortRef.current) break;
@@ -940,6 +942,7 @@ export default function RevocredModal() {
     batchAbortRef.current = false;
     setBatchRunning(true);
     setBatchResults([]);
+    batchResultsRef.current = [];
     setBatchCycleCount(0);
     setActivityLocked(false);
     runBatchCycle();
