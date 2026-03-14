@@ -225,11 +225,13 @@ export default function RevocredModal() {
         setBatchNextRunTimestamp(null);
       }
 
-      // If running, sync config from server and auto-switch to batch tab
+      // If running, sync ALL config from server and auto-switch to batch tab
       if (isActive) {
         if (data.batchDate) setBatchDate(data.batchDate);
         if (data.batchStatusFilter) setBatchStatus(data.batchStatusFilter);
         if (data.useCurrentDate !== undefined) setUseCurrentDate(data.useCurrentDate);
+        if (data.batchStepDelay) setBatchStepDelay(data.batchStepDelay);
+        if (data.batchInterval) setBatchInterval(data.batchInterval);
         setTab("batch");
       }
     } catch {
