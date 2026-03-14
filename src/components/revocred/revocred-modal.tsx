@@ -155,9 +155,7 @@ export default function RevocredModal() {
   const [batchInterval, setBatchInterval] = useState(5);
   const [batchOrders, setBatchOrders] = useState<PendingOrder[]>([]);
   const [batchResults, setBatchResults] = useState<BatchResult[]>([]);
-  const batchResultsRef = useRef<BatchResult[]>([]);
   const [batchRunning, setBatchRunning] = useState(false);
-  // batchAutoRepeat removed — interval always applies between orders
   const [batchCurrentKdi, setBatchCurrentKdi] = useState("");
   const [batchCurrentIndex, setBatchCurrentIndex] = useState(-1);
   const [batchLoading, setBatchLoading] = useState(false);
@@ -170,12 +168,7 @@ export default function RevocredModal() {
   const [expandedLogData, setExpandedLogData] = useState<LogRecord | null>(null);
   const [loadingLog, setLoadingLog] = useState(false);
   const [kdisWithLogs, setKdisWithLogs] = useState<Set<string>>(new Set());
-  const [activityOwner, setActivityOwner] = useState<string | null>(null); // who started the activity
-  const [activityLocked, setActivityLocked] = useState(false); // another user is running
-  const batchAbortRef = useRef(false);
-  const batchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const batchEventSourceRef = useRef<EventSource | null>(null);
-  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [activityOwner, setActivityOwner] = useState<string | null>(null);
   const batchStatusRef = useRef(batchStatus);
   const batchDateRef = useRef(batchDate);
   batchStatusRef.current = batchStatus;
@@ -193,128 +186,64 @@ export default function RevocredModal() {
     return path;
   }
 
-  /* ───────── Activity: singleton lock + shared state ───────── */
+  /* ───────── Server-Side Batch Polling ───────── */
+  /* The batch loop runs on the SERVER (batch-manager singleton).
+     The modal just polls GET /batch every 3 seconds to get status. */
 
-  async function activityPost(body: Record<string, unknown>) {
+  const [activityStatus, setActivityStatus] = useState<string>("idle");
+
+  async function pollBatchStatus() {
     try {
-      const res = await fetch(apiUrl("/meo/api/v1/revocred/activity"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      return await res.json();
-    } catch {
-      return { error: "Falha na comunicação" };
-    }
-  }
-
-  const [activityStatus, setActivityStatus] = useState<string>("idle"); // idle, running, waiting, stopped
-
-  async function fetchActivity() {
-    try {
-      const res = await fetch(apiUrl("/meo/api/v1/revocred/activity"));
+      const res = await fetch(apiUrl("/meo/api/v1/revocred/batch"));
       const data = await res.json();
-      if (data.activity) {
-        const a = data.activity;
-        setActivityStatus(a.status || "idle");
 
-        if (a.status === "running" || a.status === "waiting") {
-          // Activity is active — if not the current browser's batch, show read-only
-          if (!batchRunning) {
-            setActivityLocked(true);
-            setActivityOwner(a.started_by || "Outro usuário");
-            setBatchCurrentKdi(a.current_kdi || "");
-            setBatchCurrentIndex(a.current_order_index || 0);
-            setBatchCycleCount(a.processed_count || 0);
-            if (a.results && Array.isArray(a.results)) setBatchResults(a.results);
-            if (a.batch_date) setBatchDate(a.batch_date);
-            if (a.batch_status_filter) setBatchStatus(a.batch_status_filter);
-            if (a.next_run_at) {
-              const nextTs = new Date(a.next_run_at).getTime();
-              setBatchNextRunTimestamp(nextTs);
-              setBatchNextRunAt(new Date(nextTs).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }));
-            } else {
-              setBatchNextRunAt(null);
-              setBatchNextRunTimestamp(null);
-            }
-            // Auto-switch to batch tab to show activity
-            setTab("batch");
-          }
-        } else {
-          // Not running — unlock
-          if (activityLocked) {
-            setActivityLocked(false);
-            setActivityOwner(null);
-          }
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }
+      const isActive = data.status === "running" || data.status === "waiting";
+      setBatchRunning(isActive);
+      setActivityStatus(data.status || "idle");
+      setBatchCurrentKdi(data.currentKdi || "");
+      setBatchCurrentIndex(data.currentOrderIndex ?? -1);
+      setBatchCycleCount(data.processedCount || 0);
+      if (data.results && Array.isArray(data.results)) setBatchResults(data.results);
+      setBatchSteps(
+        (data.currentSteps || []).map((s: { step: string; status: string; detail?: string }) => ({
+          step: s.step,
+          status: s.status as StepStatus,
+          detail: s.detail,
+        }))
+      );
+      setActivityOwner(data.startedBy || null);
 
-  // Poll activity state every 5 seconds when modal is open (any tab)
-  useEffect(() => {
-    if (!open) return;
-    fetchActivity();
-    const interval = setInterval(fetchActivity, 5000);
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  // Also check activity on mount to detect running activities early
-  useEffect(() => {
-    if (!isAdmin) return;
-    fetchActivity();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin]);
-
-  // Heartbeat every 15 seconds while batch is running
-  useEffect(() => {
-    if (!batchRunning) {
-      if (heartbeatRef.current) {
-        clearInterval(heartbeatRef.current);
-        heartbeatRef.current = null;
-      }
-      return;
-    }
-    heartbeatRef.current = setInterval(async () => {
-      // Send heartbeat and check if activity was stopped by another admin
-      const res = await fetch(apiUrl("/meo/api/v1/revocred/activity"));
-      const data = await res.json();
-      if (data.activity && (data.activity.status === "stopped" || data.activity.status === "idle")) {
-        // Activity was stopped by another admin — abort batch
-        batchAbortRef.current = true;
-        setBatchRunning(false);
-        setBatchCurrentKdi("");
-        setBatchCurrentIndex(-1);
+      if (data.nextRunAt) {
+        const nextTs = new Date(data.nextRunAt).getTime();
+        setBatchNextRunTimestamp(nextTs);
+        setBatchNextRunAt(
+          new Date(nextTs).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+        );
+      } else {
         setBatchNextRunAt(null);
         setBatchNextRunTimestamp(null);
-        if (batchTimerRef.current) {
-          clearTimeout(batchTimerRef.current);
-          batchTimerRef.current = null;
-        }
-        if (batchEventSourceRef.current) {
-          batchEventSourceRef.current.close();
-          batchEventSourceRef.current = null;
-        }
-        return;
       }
-      // Still running — send heartbeat
-      activityPost({ action: "heartbeat" });
-    }, 15000);
-    return () => {
-      if (heartbeatRef.current) {
-        clearInterval(heartbeatRef.current);
-        heartbeatRef.current = null;
-      }
-    };
-  }, [batchRunning]);
 
-  // Update activity state in DB when key batch states change
-  async function updateActivityState(updates: Record<string, unknown>) {
-    activityPost({ action: "update", ...updates });
+      // If running, sync config from server and auto-switch to batch tab
+      if (isActive) {
+        if (data.batchDate) setBatchDate(data.batchDate);
+        if (data.batchStatusFilter) setBatchStatus(data.batchStatusFilter);
+        setTab("batch");
+      }
+    } catch {
+      // ignore polling errors
+    }
   }
+
+  // Poll every 3 seconds when modal is open, or on mount to detect running batch
+  useEffect(() => {
+    if (!isAdmin) return;
+    pollBatchStatus(); // immediate check
+    if (!open) return;
+    const interval = setInterval(pollBatchStatus, 3000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, isAdmin]);
 
   /* ───────── Reset functions ───────── */
 
@@ -330,25 +259,21 @@ export default function RevocredModal() {
     }
   }, []);
 
-  const stopBatch = useCallback(() => {
-    batchAbortRef.current = true;
+  const stopBatch = useCallback(async () => {
+    try {
+      await fetch(apiUrl("/meo/api/v1/revocred/batch"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "stop" }),
+      });
+    } catch { /* ignore */ }
     setBatchRunning(false);
     setBatchCurrentKdi("");
     setBatchCurrentIndex(-1);
     setBatchNextRunAt(null);
     setBatchNextRunTimestamp(null);
-    setActivityLocked(false);
     setActivityStatus("stopped");
-    if (batchTimerRef.current) {
-      clearTimeout(batchTimerRef.current);
-      batchTimerRef.current = null;
-    }
-    if (batchEventSourceRef.current) {
-      batchEventSourceRef.current.close();
-      batchEventSourceRef.current = null;
-    }
-    // Release the singleton lock
-    activityPost({ action: "stop" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const close = useCallback(() => {
@@ -371,7 +296,7 @@ export default function RevocredModal() {
             return false;
           }
           // If batch is running or activity is locked, auto-switch to batch tab
-          if (batchRunning || batchNextRunAt || activityLocked) {
+          if (batchRunning || batchNextRunAt || batchRunning) {
             setTab("batch");
           }
           return true;
@@ -383,7 +308,7 @@ export default function RevocredModal() {
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open, close, resetManual, batchRunning, batchNextRunAt, isAdmin, activityLocked]);
+  }, [open, close, resetManual, batchRunning, batchNextRunAt, isAdmin, batchRunning]);
 
   useEffect(() => {
     if (open && tab === "manual") {
@@ -609,10 +534,9 @@ export default function RevocredModal() {
       // Store startTime for duration calculation
       (es as unknown as Record<string, number>)._startTime = startTime;
 
+      // Store ref for manual mode only (batch runs server-side)
       if (mode === "manual") {
         eventSourceRef.current = es;
-      } else {
-        batchEventSourceRef.current = es;
       }
     });
   }
@@ -735,217 +659,39 @@ export default function RevocredModal() {
     }
   }
 
-  /* ───────── Batch: Fetch fresh orders from API ───────── */
-
-  async function fetchOrdersFromAPI(): Promise<PendingOrder[]> {
-    try {
-      const res = await fetch(
-        apiUrl(`/meo/api/v1/revocred/orders-pending?date=${batchDateRef.current}&status=${batchStatusRef.current}`)
-      );
-      const data = await res.json();
-      return data.orders || [];
-    } catch {
-      return [];
-    }
-  }
-
-  /* ───────── Batch: Run cycle (robust: 1 order at a time, reconnect each) ───────── */
-
-  async function runBatchCycle() {
-    if (batchAbortRef.current) return;
-
-    const processedKdis = new Set<string>();
-    let orderIndex = 0;
-
-    while (!batchAbortRef.current) {
-      // 1. Fresh fetch — re-query DB each iteration to capture NEW orders
-      const freshOrders = await fetchOrdersFromAPI();
-
-      if (batchAbortRef.current) break;
-
-      // 2. Filter out already processed in this batch run
-      const remaining = freshOrders.filter((o) => !processedKdis.has(o.kdi));
-
-      // Update displayed order list with fresh data (including new orders)
-      setBatchOrders(freshOrders);
-      // Check logs for any new orders that appeared
-      if (freshOrders.length > 0) {
-        checkKdisWithLogs(freshOrders.map((o) => o.kdi));
-      }
-
-      if (remaining.length === 0) {
-        // No pending orders — wait interval and check again (NEVER stop, only admin can stop)
-        if (batchAbortRef.current) break;
-
-        const waitMs = batchInterval * 60 * 1000;
-        const nextTs = Date.now() + waitMs;
-        const nextTime = new Date(nextTs);
-        setBatchCurrentKdi("");
-        setBatchSteps([]);
-        setBatchNextRunAt(
-          nextTime.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
-        );
-        setBatchNextRunTimestamp(nextTs);
-
-        // Update activity to waiting state
-        updateActivityState({
-          status: "waiting",
-          current_kdi: null,
-          next_run_at: nextTime.toISOString(),
-          total_orders: freshOrders.length,
-        });
-
-        await new Promise<void>((resolve) => {
-          batchTimerRef.current = setTimeout(() => {
-            setBatchNextRunAt(null);
-            setBatchNextRunTimestamp(null);
-            resolve();
-          }, waitMs);
-        });
-
-        if (batchAbortRef.current) break;
-        continue; // Re-fetch and check for new orders — never stop
-      }
-
-      // 3. Take the first unprocessed order
-      const order = remaining[0];
-      const orderIdx = freshOrders.findIndex((o) => o.kdi === order.kdi);
-      setBatchCurrentKdi(order.kdi);
-      setBatchCurrentIndex(orderIdx);
-
-      // Update activity in DB
-      updateActivityState({
-        status: "running",
-        current_kdi: order.kdi,
-        current_order_index: orderIdx,
-        total_orders: freshOrders.length,
-      });
-
-      // 4. Run simulation (opens browser, processes, closes browser)
-      const simStartTime = Date.now();
-      const res = await runSimulation(order.kdi, batchStepDelay, "batch");
-
-      if (batchAbortRef.current) break;
-
-      // 5. Normalize resultado: anything NOT APROVADO → REPROVADO
-      const normalizedResultado = res.resultado === "APROVADO" ? "APROVADO" : "REPROVADO";
-      const statusUpdatedTo =
-        normalizedResultado === "APROVADO" ? "analysis_approved" : "analysis_rejected";
-
-      // 6. Update order status in database based on result
-      await updateOrderStatus(order.kdi, normalizedResultado);
-
-      // 7. Save detailed log (keep original resultado for audit, but status reflects normalized)
-      saveLog({
-        kdi: order.kdi,
-        customer_name: order.customerName,
-        cpf_cnpj: order.cpfCnpj,
-        mode: "batch",
-        status_before: batchStatusRef.current,
-        resultado: normalizedResultado,
-        resultado_detail: res.detail || (res.resultado === "ERRO" ? `Erro: ${res.detail}` : res.resultado === "INDEFINIDO" ? "Resultado indeterminado" : res.detail),
-        parcelas: res.parcelas || null,
-        steps_log: res.stepsLog || null,
-        error_message: (res.resultado === "ERRO" || res.resultado === "INDEFINIDO") ? (res.detail || res.resultado) : null,
-        duration_ms: Date.now() - simStartTime,
-        batch_date: batchDateRef.current,
-        batch_status_filter: batchStatusRef.current,
-        status_updated_to: statusUpdatedTo,
-        system_power: order.systemPower,
-        equipment_value: order.equipmentValue,
-        labor_value: order.laborValue,
-        monthly_bill_value: order.monthlyBillValue,
-      });
-
-      // 8. Record result in UI (normalized)
-      const resultEntry: BatchResult = {
-        kdi: order.kdi,
-        customerName: order.customerName,
-        resultado: normalizedResultado as BatchResult["resultado"],
-        detail: res.detail || (res.resultado !== "APROVADO" ? `Original: ${res.resultado}` : ""),
-      };
-
-      setBatchResults((prev) => {
-        const updated = [...prev.filter((r) => r.kdi !== order.kdi), resultEntry];
-        batchResultsRef.current = updated;
-        return updated;
-      });
-
-      processedKdis.add(order.kdi);
-      orderIndex++;
-      setBatchCycleCount(orderIndex);
-
-      // Update activity with results (use ref to avoid stale closure)
-      updateActivityState({
-        processed_count: orderIndex,
-        results: batchResultsRef.current,
-      });
-
-      if (batchAbortRef.current) break;
-
-      // 9. Disconnect & wait interval before next order (will re-fetch to capture new orders)
-      const waitMs = batchInterval * 60 * 1000;
-      const nextTs = Date.now() + waitMs;
-      const nextTime = new Date(nextTs);
-      setBatchCurrentKdi("");
-      setBatchSteps([]);
-      setBatchNextRunAt(
-        nextTime.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
-      );
-      setBatchNextRunTimestamp(nextTs);
-
-      // Update activity to waiting state
-      updateActivityState({
-        status: "waiting",
-        current_kdi: null,
-        next_run_at: nextTime.toISOString(),
-      });
-
-      await new Promise<void>((resolve) => {
-        batchTimerRef.current = setTimeout(() => {
-          setBatchNextRunAt(null);
-          setBatchNextRunTimestamp(null);
-          resolve();
-        }, waitMs);
-      });
-
-      if (batchAbortRef.current) break;
-    }
-
-    // Batch finished
-    setBatchCurrentKdi("");
-    setBatchCurrentIndex(-1);
-    setBatchRunning(false);
-    setBatchNextRunAt(null);
-    setBatchNextRunTimestamp(null);
-    setActivityLocked(false);
-    activityPost({ action: "stop" });
-  }
+  /* ───────── Batch: Start/Stop (server-side via batch API) ───────── */
 
   async function startBatch() {
-    // Try to acquire the singleton lock
-    const res = await activityPost({
-      action: "start",
-      started_by: currentUserName,
-      batch_date: batchDateRef.current,
-      batch_status_filter: batchStatusRef.current,
-      batch_step_delay: batchStepDelay,
-      batch_interval: batchInterval,
-      total_orders: batchOrders.length,
-    });
+    try {
+      const res = await fetch(apiUrl("/meo/api/v1/revocred/batch"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "start",
+          startedBy: currentUserName,
+          batchDate: batchDateRef.current,
+          batchStatusFilter: batchStatusRef.current,
+          batchStepDelay: batchStepDelay,
+          batchInterval: batchInterval,
+          totalOrders: batchOrders.length,
+        }),
+      });
+      const data = await res.json();
 
-    if (res.locked) {
-      alert(res.error || "Já existe uma integração em andamento.");
-      return;
+      if (data.locked) {
+        alert(data.error || "Já existe uma integração em andamento.");
+        return;
+      }
+
+      if (data.success) {
+        setBatchRunning(true);
+        setBatchResults([]);
+        setBatchCycleCount(0);
+        setActivityStatus("running");
+      }
+    } catch {
+      alert("Erro ao iniciar lote. Verifique a conexão com o servidor.");
     }
-
-    batchAbortRef.current = false;
-    setBatchRunning(true);
-    setBatchResults([]);
-    batchResultsRef.current = [];
-    setBatchCycleCount(0);
-    setActivityLocked(false);
-    runBatchCycle();
   }
 
   /* ───────── Cleanup ───────── */
@@ -953,8 +699,6 @@ export default function RevocredModal() {
   useEffect(() => {
     return () => {
       if (eventSourceRef.current) eventSourceRef.current.close();
-      if (batchEventSourceRef.current) batchEventSourceRef.current.close();
-      if (batchTimerRef.current) clearTimeout(batchTimerRef.current);
     };
   }, []);
 
@@ -1189,12 +933,12 @@ export default function RevocredModal() {
                     type="date"
                     value={batchDate}
                     onChange={(e) => { setBatchDate(e.target.value); setBatchOrders([]); setBatchResults([]); }}
-                    disabled={batchRunning || activityLocked}
+                    disabled={batchRunning}
                     className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
                   />
                   <button
                     onClick={fetchPendingOrders}
-                    disabled={batchRunning || batchLoading || activityLocked}
+                    disabled={batchRunning || batchLoading}
                     className="px-3 py-1.5 text-sm text-green-600 border border-green-200 rounded-lg hover:bg-green-50 disabled:opacity-50 flex items-center gap-1.5"
                   >
                     {batchLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
@@ -1209,7 +953,7 @@ export default function RevocredModal() {
                   <select
                     value={batchStatus}
                     onChange={(e) => { setBatchStatus(e.target.value); setBatchOrders([]); setBatchResults([]); }}
-                    disabled={batchRunning || activityLocked}
+                    disabled={batchRunning}
                     className="flex-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 bg-white"
                   >
                     {ORDER_STATUSES.map((s) => (
@@ -1228,7 +972,7 @@ export default function RevocredModal() {
                     max={10}
                     value={batchStepDelay}
                     onChange={(e) => setBatchStepDelay(Math.max(1, Math.min(10, Number(e.target.value))))}
-                    disabled={batchRunning || activityLocked}
+                    disabled={batchRunning}
                     className="w-16 px-3 py-1.5 text-sm border border-gray-200 rounded-lg text-center disabled:opacity-50"
                   />
                   <span className="text-sm text-gray-400">segundos</span>
@@ -1244,84 +988,33 @@ export default function RevocredModal() {
                     max={120}
                     value={batchInterval}
                     onChange={(e) => setBatchInterval(Math.max(1, Math.min(120, Number(e.target.value))))}
-                    disabled={batchRunning || activityLocked}
+                    disabled={batchRunning}
                     className="w-16 px-3 py-1.5 text-sm border border-gray-200 rounded-lg text-center disabled:opacity-50"
                   />
                   <span className="text-sm text-gray-400">min entre cada pedido</span>
                 </div>
               </div>
 
-              {/* Activity status panel — visible to all admins */}
-              {activityLocked && !batchRunning && (activityStatus === "running" || activityStatus === "waiting") && (
-                <div className="mb-4 p-3 bg-amber-50 rounded-xl border border-amber-200">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm text-amber-800">
-                      {activityStatus === "running" ? (
-                        <Loader2 className="w-4 h-4 animate-spin text-amber-600" />
-                      ) : (
-                        <RefreshCw className="w-4 h-4 text-amber-600" />
-                      )}
-                      <span className="font-medium">
-                        {activityStatus === "running" ? "Processando pedido..." : "Aguardando próximo ciclo..."}
-                      </span>
-                    </div>
-                    <button
-                      onClick={async () => {
-                        if (!confirm("Tem certeza que deseja parar a integração em andamento?")) return;
-                        await activityPost({ action: "stop" });
-                        setActivityLocked(false);
-                        setActivityOwner(null);
-                        setActivityStatus("stopped");
-                        setBatchResults([]);
-                        setBatchCurrentKdi("");
-                        setBatchCycleCount(0);
-                        setBatchNextRunAt(null);
-                        setBatchNextRunTimestamp(null);
-                      }}
-                      className="flex items-center gap-1 px-3 py-1 text-xs font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
-                    >
-                      <Square className="w-3 h-3" />
-                      Parar
-                    </button>
-                  </div>
-                  <div className="mt-2 space-y-1 text-xs text-amber-700">
-                    <p>Iniciada por: <strong>{activityOwner}</strong></p>
-                    {batchCurrentKdi && (
-                      <p>Processando KDI: <span className="font-mono font-medium">{batchCurrentKdi}</span></p>
-                    )}
-                    {batchNextRunAt && !batchCurrentKdi && (
-                      <p>Próximo ciclo às: <span className="font-medium">{batchNextRunAt}</span>
-                        {batchCountdown && <span className="ml-1 font-mono bg-amber-100 px-1.5 py-0.5 rounded">{batchCountdown}</span>}
-                      </p>
-                    )}
-                    {batchCycleCount > 0 && <p>Pedidos processados: <strong>{batchCycleCount}</strong></p>}
-                  </div>
-                  {batchResults.length > 0 && (
-                    <div className="mt-2 flex items-center gap-3 text-xs">
-                      <span className="text-green-600 font-medium">
-                        <CheckCircle className="w-3 h-3 inline mr-0.5" />
-                        {batchResults.filter((r) => r.resultado === "APROVADO").length} aprovados
-                      </span>
-                      <span className="text-red-600 font-medium">
-                        <X className="w-3 h-3 inline mr-0.5" />
-                        {batchResults.filter((r) => r.resultado !== "APROVADO").length} reprovados
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Activity stopped/error — show reset button */}
-              {!batchRunning && !activityLocked && activityStatus === "stopped" && (
+              {/* Activity stopped — show reset button */}
+              {!batchRunning && activityStatus === "stopped" && (
                 <div className="mb-4 p-3 bg-gray-50 rounded-xl border border-gray-200">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Square className="w-4 h-4 text-gray-400" />
                       <span className="font-medium">Última integração finalizada</span>
+                      {activityOwner && (
+                        <span className="text-xs text-gray-400">(por {activityOwner})</span>
+                      )}
                     </div>
                     <button
                       onClick={async () => {
-                        await activityPost({ action: "reset" });
+                        try {
+                          await fetch(apiUrl("/meo/api/v1/revocred/batch"), {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ action: "reset" }),
+                          });
+                        } catch { /* ignore */ }
                         setActivityStatus("idle");
                         setBatchResults([]);
                         setBatchCycleCount(0);
@@ -1353,7 +1046,7 @@ export default function RevocredModal() {
                         </span>
                       )}
                     </span>
-                    {!batchRunning && !activityLocked && (
+                    {!batchRunning && (
                       <button
                         onClick={startBatch}
                         className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
