@@ -641,6 +641,18 @@ export default function RevocredModal() {
     }
   }
 
+  /* ───────── Batch: Auto-fetch orders when date/status change ───────── */
+
+  useEffect(() => {
+    if (!isAdmin || batchRunning) return;
+    if (!batchDate) return;
+    // Auto-fetch when tab is batch and date/status are set
+    if (tab === "batch" && open) {
+      fetchPendingOrders();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [batchDate, batchStatus, tab, open, isAdmin]);
+
   /* ───────── Batch: Update order status in DB ───────── */
 
   async function updateOrderStatus(kdi: string, resultado: string) {
@@ -935,7 +947,7 @@ export default function RevocredModal() {
                   <input
                     type="date"
                     value={batchDate}
-                    onChange={(e) => { setBatchDate(e.target.value); setUseCurrentDate(false); setBatchOrders([]); setBatchResults([]); }}
+                    onChange={(e) => { setBatchDate(e.target.value); setUseCurrentDate(false); setBatchResults([]); }}
                     disabled={batchRunning || useCurrentDate}
                     className={`px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 ${useCurrentDate ? "bg-green-50 border-green-200" : ""}`}
                   />
@@ -962,14 +974,9 @@ export default function RevocredModal() {
                     />
                     Hoje
                   </label>
-                  <button
-                    onClick={fetchPendingOrders}
-                    disabled={batchRunning || batchLoading}
-                    className="px-3 py-1.5 text-sm text-green-600 border border-green-200 rounded-lg hover:bg-green-50 disabled:opacity-50 flex items-center gap-1.5"
-                  >
-                    {batchLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
-                    Buscar
-                  </button>
+                  {batchLoading && (
+                    <Loader2 className="w-4 h-4 animate-spin text-green-500" />
+                  )}
                 </div>
 
                 {/* Status filter */}
@@ -978,7 +985,7 @@ export default function RevocredModal() {
                   <label className="text-sm text-gray-600 w-32">Status:</label>
                   <select
                     value={batchStatus}
-                    onChange={(e) => { setBatchStatus(e.target.value); setBatchOrders([]); setBatchResults([]); }}
+                    onChange={(e) => { setBatchStatus(e.target.value); setBatchResults([]); }}
                     disabled={batchRunning}
                     className="flex-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 bg-white"
                   >
@@ -1266,9 +1273,9 @@ export default function RevocredModal() {
                 </div>
               )}
 
-              {batchOrders.length === 0 && !batchLoading && (
+              {batchOrders.length === 0 && !batchLoading && !batchRunning && (
                 <div className="mb-4 p-4 text-center text-sm text-gray-400 bg-gray-50 rounded-xl">
-                  Selecione uma data, status e clique em &quot;Buscar&quot; para listar pedidos
+                  Nenhum pedido encontrado para a data e status selecionados
                 </div>
               )}
 
