@@ -214,7 +214,14 @@ export default function RevocredModal() {
       );
       setActivityOwner(data.startedBy || null);
 
-      if (data.nextRunAt) {
+      if (data.waitRemainingMs !== undefined && data.waitRemainingMs > 0) {
+        // Use remaining ms from server to avoid clock skew between Docker and browser
+        const clientNextTs = Date.now() + data.waitRemainingMs;
+        setBatchNextRunTimestamp(clientNextTs);
+        setBatchNextRunAt(
+          new Date(clientNextTs).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+        );
+      } else if (data.nextRunAt) {
         const nextTs = new Date(data.nextRunAt).getTime();
         setBatchNextRunTimestamp(nextTs);
         setBatchNextRunAt(
@@ -1276,8 +1283,23 @@ export default function RevocredModal() {
               )}
 
               {batchOrders.length === 0 && !batchLoading && !batchRunning && (
-                <div className="mb-4 p-4 text-center text-sm text-gray-400 bg-gray-50 rounded-xl">
-                  Nenhum pedido encontrado para a data e status selecionados
+                <div className="mb-4 p-4 bg-gray-50 rounded-xl">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-400">
+                      Nenhum pedido encontrado para a data e status selecionados
+                    </span>
+                    <button
+                      onClick={startBatch}
+                      className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                      title="Inicia a rotina mesmo sem pedidos — ficará aguardando novos pedidos aparecerem"
+                    >
+                      <Play className="w-3.5 h-3.5" />
+                      Iniciar Rotina
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    A rotina pode ser iniciada mesmo sem pedidos — ficará aguardando e verificando a cada ciclo.
+                  </p>
                 </div>
               )}
 

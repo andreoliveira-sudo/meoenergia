@@ -385,10 +385,10 @@ async function runBatchLoop() {
           state.status = "waiting";
           state.currentKdi = null;
           state.currentSteps = [];
-          const nextTime = new Date(
-            Date.now() + state.batchInterval * 60 * 1000
-          );
+          const waitMs = state.batchInterval * 60 * 1000;
+          const nextTime = new Date(Date.now() + waitMs);
           state.nextRunAt = nextTime.toISOString();
+          console.log(`[BatchManager] No pending orders. Waiting ${state.batchInterval}min (${waitMs}ms). Next: ${nextTime.toISOString()}`);
 
           syncActivity({
             status: "waiting",
@@ -502,10 +502,10 @@ async function runBatchLoop() {
         state.status = "waiting";
         state.currentKdi = null;
         state.currentSteps = [];
-        const nextTime = new Date(
-          Date.now() + state.batchInterval * 60 * 1000
-        );
+        const waitMs = state.batchInterval * 60 * 1000;
+        const nextTime = new Date(Date.now() + waitMs);
         state.nextRunAt = nextTime.toISOString();
+        console.log(`[BatchManager] Order done. Waiting ${state.batchInterval}min (${waitMs}ms). Next: ${nextTime.toISOString()}`);
 
         syncActivity({
           status: "waiting",
@@ -650,8 +650,13 @@ export function stopBatch(): { success: boolean } {
   return { success: true };
 }
 
-export function getBatchStatus(): BatchState & { running: boolean } {
-  return { ...getState(), running: isRunning() };
+export function getBatchStatus(): BatchState & { running: boolean; waitRemainingMs?: number } {
+  const state = getState();
+  let waitRemainingMs: number | undefined;
+  if (state.nextRunAt) {
+    waitRemainingMs = Math.max(0, new Date(state.nextRunAt).getTime() - Date.now());
+  }
+  return { ...state, running: isRunning(), waitRemainingMs };
 }
 
 export function resetBatch(): { success: boolean } {
