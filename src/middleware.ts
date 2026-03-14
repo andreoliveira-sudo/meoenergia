@@ -11,6 +11,33 @@ const PUBLIC_ROUTES = [
 export async function middleware(request: NextRequest) {
 	const pathname = request.nextUrl.pathname
 
+	// ─── CORS for RevoCred API routes (needed when Vercel PROD calls VM101 remote server) ───
+	if (pathname.startsWith("/api/v1/revocred")) {
+		// Handle preflight OPTIONS request
+		if (request.method === "OPTIONS") {
+			return new NextResponse(null, {
+				status: 204,
+				headers: {
+					"Access-Control-Allow-Origin": "*",
+					"Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+					"Access-Control-Allow-Headers": "Content-Type, Authorization",
+					"Access-Control-Max-Age": "86400",
+				},
+			})
+		}
+
+		// For actual requests, add CORS headers to response
+		const isPublicRoute = PUBLIC_ROUTES.some(pattern => pattern.test(pathname))
+		const response = isPublicRoute
+			? NextResponse.next()
+			: await updateSession(request)
+
+		response.headers.set("Access-Control-Allow-Origin", "*")
+		response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		return response
+	}
+
 	// Se é rota pública: pula updateSession, apenas passa adiante
 	const isPublicRoute = PUBLIC_ROUTES.some(pattern => pattern.test(pathname))
 

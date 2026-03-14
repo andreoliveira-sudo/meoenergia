@@ -1,7 +1,8 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { createClient } from "@/lib/supabase/client"
 import { ViewOrderSheet } from "@/components/dialogs/view-order-sheet"
 import {
 	getCoreRowModel,
@@ -59,6 +60,33 @@ export const OrdersTable = ({
 		const timer = setTimeout(() => setDebouncedSearch(searchFilter), 300)
 		return () => clearTimeout(timer)
 	}, [searchFilter])
+
+	// Supabase Realtime: refresh when orders are updated (e.g. status change from RevoCred)
+	const queryClientRT = useQueryClient()
+	useEffect(() => {
+		const supabase = createClient()
+		const channel = supabase
+			.channel("orders-realtime")
+			.on(
+				"postgres_changes",
+				{
+					event: "UPDATE",
+					schema: "public",
+					table: "orders",
+				},
+				() => {
+					// Invalidate orders queries to refresh the table
+					queryClientRT.invalidateQueries({ queryKey: ["orders-paginated"] })
+					queryClientRT.invalidateQueries({ queryKey: ["orders"] })
+					queryClientRT.invalidateQueries({ queryKey: ["dashboard-stats"] })
+				}
+			)
+			.subscribe()
+
+		return () => {
+			supabase.removeChannel(channel)
+		}
+	}, [queryClientRT])
 
 	// Resetar página ao mudar filtros
 	useEffect(() => {
