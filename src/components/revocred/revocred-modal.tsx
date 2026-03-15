@@ -149,7 +149,7 @@ export default function RevocredModal() {
   const eventSourceRef = useRef<EventSource | null>(null);
 
   // ─── Batch mode state ───
-  const [batchDate, setBatchDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [batchDate, setBatchDate] = useState(() => new Date().toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" }));
   const [useCurrentDate, setUseCurrentDate] = useState(true); // default: always use today
   const [batchStatus, setBatchStatus] = useState("analysis_pending");
   const [batchStepDelay, setBatchStepDelay] = useState(3);
@@ -692,7 +692,7 @@ export default function RevocredModal() {
         body: JSON.stringify({
           action: "start",
           startedBy: currentUserName,
-          batchDate: useCurrentDate ? new Date().toISOString().slice(0, 10) : batchDateRef.current,
+          batchDate: useCurrentDate ? new Date().toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" }) : batchDateRef.current,
           batchStatusFilter: batchStatusRef.current,
           batchStepDelay: batchStepDelay,
           batchInterval: batchInterval,
@@ -975,7 +975,7 @@ export default function RevocredModal() {
                         if (batchRunning) return;
                         setUseCurrentDate(e.target.checked);
                         if (e.target.checked) {
-                          setBatchDate(new Date().toISOString().slice(0, 10));
+                          setBatchDate(new Date().toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" }));
                         }
                       }}
                       disabled={batchRunning}
