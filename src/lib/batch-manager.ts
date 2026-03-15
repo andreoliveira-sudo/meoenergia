@@ -143,8 +143,9 @@ async function fetchPendingOrders(
   statusFilter: string
 ): Promise<PendingOrder[]> {
   const supabase = getSupabase();
-  const dateFrom = `${date}T00:00:00.000Z`;
-  const dateTo = `${date}T23:59:59.999Z`;
+  // Usar timezone de Brasília (UTC-3) para filtros de data
+  const dateFrom = `${date}T00:00:00.000-03:00`;
+  const dateTo = `${date}T23:59:59.999-03:00`;
 
   const { data: orders, error } = await supabase
     .from("orders")
@@ -363,7 +364,7 @@ async function runBatchLoop() {
         // 1. Fresh fetch — re-query DB each iteration to capture new orders
         // If useCurrentDate is enabled, always use today's date (auto-advances at midnight)
         const effectiveDate = state.useCurrentDate
-          ? new Date().toISOString().slice(0, 10)
+          ? new Date().toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" })
           : state.batchDate;
         if (state.useCurrentDate) {
           state.batchDate = effectiveDate; // keep state in sync for UI display

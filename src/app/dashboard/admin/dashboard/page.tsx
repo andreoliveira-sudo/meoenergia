@@ -6,9 +6,9 @@ import { DashboardDateFilter } from "@/components/dashboard/dashboard-date-filte
 import { DashboardStatsClient } from "@/components/dashboard/dashboard-stats-client"
 import { getFirstAndLastName } from "@/lib/utils"
 
+/** Retorna a data de hoje no fuso de Brasília (America/Sao_Paulo) — YYYY-MM-DD */
 function getToday(): string {
-	const now = new Date()
-	return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
+	return new Date().toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" })
 }
 
 function formatDateLabel(dateFrom: string, dateTo: string): string {

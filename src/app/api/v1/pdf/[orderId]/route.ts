@@ -157,7 +157,7 @@ function generateHTMLWithInlineCSS(data: {
   const isPj = clientType === 'pj'
   const clientTypeLabel = isPj ? 'Empresas / Condomínio' : 'Pessoa Física'
   const currentDate = new Date().toLocaleDateString('pt-BR', {
-    day: '2-digit', month: 'long', year: 'numeric'
+    day: '2-digit', month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo'
   })
 
   const tableHTML = isPj

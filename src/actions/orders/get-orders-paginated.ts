@@ -105,10 +105,10 @@ export async function getOrdersPaginated(
 				query = query.in("status", filters.status)
 			}
 			if (filters.dateFrom) {
-				const localStart = new Date(`${filters.dateFrom}T00:00:00`); query = query.gte("created_at", localStart.toISOString())
+				query = query.gte("created_at", `${filters.dateFrom}T00:00:00-03:00`)
 			}
 			if (filters.dateTo) {
-				const localEnd = new Date(`${filters.dateTo}T23:59:59.999`); query = query.lte("created_at", localEnd.toISOString())
+				query = query.lte("created_at", `${filters.dateTo}T23:59:59.999-03:00`)
 			}
 
 			const { data, error } = await query

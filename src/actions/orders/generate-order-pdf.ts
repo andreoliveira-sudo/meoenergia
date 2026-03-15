@@ -19,9 +19,10 @@ function centerTextAtX({ text, font, fontSize, centerX }: { text: string; font: 
 }
 
 function formatLongDate(date: Date): string {
-	const day = date.getDate().toString().padStart(2, '0')
-	const month = date.toLocaleDateString('pt-BR', { month: 'long' })
-	const year = date.getFullYear()
+	const opts: Intl.DateTimeFormatOptions = { timeZone: 'America/Sao_Paulo' }
+	const day = date.toLocaleDateString('pt-BR', { ...opts, day: '2-digit' }).slice(0, 2)
+	const month = date.toLocaleDateString('pt-BR', { ...opts, month: 'long' })
+	const year = date.toLocaleDateString('pt-BR', { ...opts, year: 'numeric' }).slice(-4)
 	return `${day} de ${month} de ${year}`
 }
 

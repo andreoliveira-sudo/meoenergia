@@ -13,25 +13,22 @@ export interface DashboardStats {
 	newSellersToday: number
 }
 
+/** Retorna a data atual no fuso de Brasília (America/Sao_Paulo) no formato YYYY-MM-DD */
+function getTodayBR(): string {
+	return new Date().toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" })
+}
+
 export async function getDashboardStats(dateFrom?: string, dateTo?: string): Promise<DashboardStats> {
 	const supabase = await createClient()
 
-	let startISO: string
-	let endISO: string
+	// Usar timezone de Brasília (UTC-3) para os filtros de data
+	// Isso garante que "hoje" = dia no Brasil, não UTC
+	const effectiveFrom = dateFrom || getTodayBR()
+	const effectiveTo = dateTo || getTodayBR()
 
-	if (dateFrom) {
-		startISO = new Date(`${dateFrom}T00:00:00`).toISOString()
-	} else {
-		const now = new Date()
-		startISO = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString()
-	}
-
-	if (dateTo) {
-		endISO = new Date(`${dateTo}T23:59:59.999`).toISOString()
-	} else {
-		const now = new Date()
-		endISO = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).toISOString()
-	}
+	// Converter para ISO com offset de Brasília (-03:00)
+	const startISO = `${effectiveFrom}T00:00:00-03:00`
+	const endISO = `${effectiveTo}T23:59:59.999-03:00`
 
 	const applyDateFilter = (query: any) => query.gte("created_at", startISO).lte("created_at", endISO)
 
