@@ -56,13 +56,12 @@ export async function replayMissedWebhooks(dateFrom: string, dateTo: string, del
     try {
         const supabase = createAdminClient() as any
 
-        // Buscar pedidos com api_key_id que estão em status aprovado ou reprovado
-        // e foram atualizados no período
+        // Buscar TODOS os pedidos com api_key_id no período (qualquer status)
+        // Inclui aprovados, reprovados, e qualquer outro status que tenha webhook configurado
         const { data: orders, error } = await supabase
             .from('orders')
             .select('id, kdi, status, api_key_id, updated_at')
             .not('api_key_id', 'is', null)
-            .in('status', ['analysis_approved', 'analysis_rejected'])
             .gte('updated_at', `${dateFrom}T00:00:00`)
             .lte('updated_at', `${dateTo}T23:59:59`)
             .order('updated_at', { ascending: true })
@@ -73,7 +72,7 @@ export async function replayMissedWebhooks(dateFrom: string, dateTo: string, del
         }
 
         if (!orders || orders.length === 0) {
-            return { success: true, message: 'Nenhum pedido encontrado no periodo com api_key_id e status aprovado/reprovado.', data: { total: 0, sent: 0, errors: 0 } }
+            return { success: true, message: 'Nenhum pedido encontrado no periodo com api_key_id.', data: { total: 0, sent: 0, errors: 0 } }
         }
 
         let sent = 0
