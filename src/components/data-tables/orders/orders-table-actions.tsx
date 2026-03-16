@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { DollarSign, Download, Edit, Eye, FileDown, FileText, Info, Loader2, RefreshCw, Trash2, X as XIcon } from "lucide-react"
-import { useState, useTransition } from "react"
+import { useSyncExternalStore, useState, useTransition } from "react"
 import { toast } from "sonner"
 
 import { hasPermission } from "@/actions/auth"
@@ -29,7 +29,26 @@ import type { OrderWithRelations } from "@/lib/definitions/orders"
 
 type DocumentFieldName = (typeof documentFields)[number]["name"]
 
+/* ── Ctrl+Y toggle for RevoCred log buttons (global, shared across all rows) ── */
+let _showLogs = false
+const _listeners = new Set<() => void>()
+function subscribeShowLogs(cb: () => void) { _listeners.add(cb); return () => { _listeners.delete(cb) } }
+function getShowLogs() { return _showLogs }
+if (typeof window !== "undefined") {
+	window.addEventListener("keydown", (e) => {
+		if (e.ctrlKey && e.key.toLowerCase() === "y") {
+			e.preventDefault()
+			_showLogs = !_showLogs
+			_listeners.forEach((cb) => cb())
+		}
+	})
+}
+function useShowRevocredLogs() {
+	return useSyncExternalStore(subscribeShowLogs, getShowLogs, () => false)
+}
+
 export const OrdersTableActions = ({ order }: { order: OrderWithRelations }) => {
+	const showRevocredLogs = useShowRevocredLogs()
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 	const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false)
 	const [isManageRatesDialogOpen, setIsManageRatesDialogOpen] = useState(false)
@@ -149,7 +168,7 @@ export const OrdersTableActions = ({ order }: { order: OrderWithRelations }) => 
 	return (
 		<>
 			<div className="flex items-center justify-center gap-x-2 alternative-buttons">
-				{hasRevocredLog && (
+				{showRevocredLogs && hasRevocredLog && (
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<Button
