@@ -1,13 +1,16 @@
 "use client"
 
 import type { ColumnDef } from "@tanstack/react-table"
-import { ArrowUpDown, CheckCircle2, ChevronDown, ChevronRight, Copy, XCircle } from "lucide-react"
+import { ArrowUpDown, CheckCircle2, ChevronDown, ChevronRight, Copy, Loader2, RefreshCw, XCircle } from "lucide-react"
 import { useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import type { WebhookLog } from "@/actions/developer/get-webhook-logs"
+import { resendOrderWebhook } from "@/actions/developer/resend-webhook"
 import { format } from "date-fns"
+import { toast } from "sonner"
 
 function formatTimestamp(dateString: string): string {
 	if (!dateString) return ""
@@ -97,6 +100,44 @@ function JsonViewer({ data, label }: { data: unknown; label: string }) {
 				{jsonString}
 			</pre>
 		</div>
+	)
+}
+
+function ResendButton({ orderId }: { orderId: string | null }) {
+	const [loading, setLoading] = useState(false)
+	const queryClient = useQueryClient()
+
+	if (!orderId) return <span className="text-muted-foreground text-xs">-</span>
+
+	const handleResend = async () => {
+		setLoading(true)
+		try {
+			const result = await resendOrderWebhook(orderId)
+			if (result.success) {
+				toast.success(result.message)
+				queryClient.invalidateQueries({ queryKey: ["webhook-logs"] })
+			} else {
+				toast.error(result.message)
+			}
+		} catch {
+			toast.error("Erro ao reenviar webhook")
+		} finally {
+			setLoading(false)
+		}
+	}
+
+	return (
+		<Button
+			variant="outline"
+			size="sm"
+			className="h-7 px-2 text-xs gap-1"
+			onClick={handleResend}
+			disabled={loading}
+			title="Reenviar webhook com status atual do pedido"
+		>
+			{loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+			Reenviar
+		</Button>
 	)
 }
 
@@ -217,7 +258,6 @@ export const columns: ColumnDef<WebhookLog>[] = [
 		cell: ({ row }) => {
 			const responseBody = row.original.response_body
 			const errorMessage = row.original.error_message
-			// Se tem response_body usa ele, senão mostra error_message como fallback
 			const data = responseBody || errorMessage
 			return <JsonViewer data={data} label="Ver Resposta" />
 		},
@@ -242,5 +282,17 @@ export const columns: ColumnDef<WebhookLog>[] = [
 		filterFn: (row, id, value) => {
 			return value.includes(row.getValue(id))
 		}
+	},
+	{
+		id: "actions",
+		header: "Acao",
+		cell: ({ row }) => {
+			// Extrair order ID do payload
+			const payload = row.original.payload as Record<string, unknown> | null
+			const orderData = payload?.data as Record<string, unknown> | null
+			const orderId = orderData?.id as string | null
+			return <ResendButton orderId={orderId} />
+		},
+		enableSorting: false,
 	}
 ]
