@@ -122,7 +122,8 @@ const navItems: NavSection[] = [
 					{ title: "Permiss\u00f5es", url: "/dashboard/admin/users", permission: "admin:users:view" },
 					{ title: "Notifica\u00e7\u00f5es", url: "/dashboard/admin/settings/notifications" },
 					{ title: "API & Integra\u00e7\u00f5es", url: "/dashboard/developer", permission: "admin:settings:manage" },
-					{ title: "Registros de API", url: "/dashboard/developer/logs", permission: "admin:settings:manage" }
+					{ title: "Registros de API", url: "/dashboard/developer/logs", permission: "admin:settings:manage" },
+					{ title: "Registros de Webhook", url: "/dashboard/developer/webhook-logs", permission: "admin:settings:manage" }
 				]
 			}
 		]

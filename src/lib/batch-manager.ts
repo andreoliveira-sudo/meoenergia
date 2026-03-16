@@ -16,6 +16,7 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
+import { fireWebhookByKdi } from "@/lib/webhook-sender";
 
 /* ─── Types ─── */
 
@@ -472,7 +473,12 @@ async function runBatchLoop() {
           monthly_bill_value: order.monthlyBillValue,
         });
 
-        // 8. Record result
+        // 8. Fire webhook (fire-and-forget, não trava o batch)
+        fireWebhookByKdi(order.kdi, statusUpdatedTo).catch((err) =>
+          console.error(`[BatchManager] Erro webhook KDI ${order.kdi}:`, err)
+        );
+
+        // 9. Record result
         const resultEntry: BatchResult = {
           kdi: order.kdi,
           customerName: order.customerName,

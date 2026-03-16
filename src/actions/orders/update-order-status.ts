@@ -110,27 +110,31 @@ async function sendOrderWebhook(apiKeyId: string, orderId: string, eventType: st
 			signal: AbortSignal.timeout(10000)
 		})
 
+		const responseText = await response.text().catch(() => '')
+
 		if (!response.ok) {
 			console.error(`Webhook falhou: ${response.status} ${response.statusText}`)
-			
+
 			await (supabase as any).from('api_key_webhook_logs').insert({
 				api_key_id: apiKeyId,
 				url: apiKeyData.webhook_url,
 				event_type: eventType,
 				status_code: response.status,
 				success: false,
-				error_message: await response.text().catch(() => 'Unknown error'),
+				error_message: responseText || 'Unknown error',
+				response_body: responseText || null,
 				payload: JSON.parse(JSON.stringify(webhookPayload))
 			})
 		} else {
 			console.log(`Webhook enviado com sucesso para ${apiKeyData.webhook_url}`)
-			
+
 			await (supabase as any).from('api_key_webhook_logs').insert({
 				api_key_id: apiKeyId,
 				url: apiKeyData.webhook_url,
 				event_type: eventType,
 				status_code: response.status,
 				success: true,
+				response_body: responseText || null,
 				payload: JSON.parse(JSON.stringify(webhookPayload))
 			})
 		}

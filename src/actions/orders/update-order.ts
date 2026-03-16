@@ -314,13 +314,15 @@ async function sendOrderUpdatedWebhook(apiKeyId: string, orderId: string) {
 		})
 
 		// Log do resultado
+		const responseText = await response.text().catch(() => '')
 		await (supabaseAdmin as any).from('api_key_webhook_logs').insert({
 			api_key_id: apiKeyId,
 			url: apiKeyData.webhook_url,
 			event_type: 'order.updated',
 			status_code: response.status,
 			success: response.ok,
-			error_message: response.ok ? null : await response.text().catch(() => 'Unknown error'),
+			error_message: response.ok ? null : (responseText || 'Unknown error'),
+			response_body: responseText || null,
 			payload: JSON.parse(JSON.stringify(webhookPayload))
 		})
 

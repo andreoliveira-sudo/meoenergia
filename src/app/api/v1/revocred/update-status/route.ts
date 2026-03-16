@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { fireWebhookByKdi } from "@/lib/webhook-sender";
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -37,6 +38,11 @@ export async function POST(request: Request) {
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
+
+  // Disparar webhook para o parceiro (fire-and-forget)
+  fireWebhookByKdi(kdi, newStatus).catch((err) =>
+    console.error(`[update-status] Erro webhook KDI ${kdi}:`, err)
+  );
 
   return Response.json({ updated: true, kdi, newStatus });
 }
