@@ -7,7 +7,6 @@ import { fireWebhookByKdi } from '@/lib/webhook-sender'
 
 /**
  * Reenvia o webhook do status ATUAL de um pedido específico.
- * Busca o pedido pelo ID, obtém o KDI e status atual, e dispara o webhook.
  */
 export async function resendOrderWebhook(orderId: string): Promise<ActionResponse<null>> {
     const userClient = await createClient()
@@ -43,10 +42,17 @@ export async function resendOrderWebhook(orderId: string): Promise<ActionRespons
 }
 
 /**
- * Replay em massa: encontra todos os pedidos com api_key_id que foram aprovados/reprovados
- * no período informado e reenvia o webhook do status atual de cada um.
+ * Lista pedidos que precisam de replay de webhook.
+ * Retorna lista de pedidos com api_key_id no período.
  */
-export async function replayMissedWebhooks(dateFrom: string, dateTo: string, delayMs: number = 2000): Promise<ActionResponse<{ total: number; sent: number; errors: number }>> {
+export interface ReplayOrder {
+    id: string
+    kdi: number
+    status: string
+    updated_at: string
+}
+
+export async function getOrdersForReplay(dateFrom: string, dateTo: string): Promise<ActionResponse<ReplayOrder[]>> {
     const userClient = await createClient()
     const { data: { user }, error: authError } = await userClient.auth.getUser()
     if (authError || !user) {
@@ -56,49 +62,44 @@ export async function replayMissedWebhooks(dateFrom: string, dateTo: string, del
     try {
         const supabase = createAdminClient() as any
 
-        // Buscar TODOS os pedidos com api_key_id no período (qualquer status)
-        // Inclui aprovados, reprovados, e qualquer outro status que tenha webhook configurado
         const { data: orders, error } = await supabase
             .from('orders')
-            .select('id, kdi, status, api_key_id, updated_at')
+            .select('id, kdi, status, updated_at')
             .not('api_key_id', 'is', null)
             .gte('updated_at', `${dateFrom}T00:00:00`)
             .lte('updated_at', `${dateTo}T23:59:59`)
             .order('updated_at', { ascending: true })
 
         if (error) {
-            console.error('Erro ao buscar pedidos para replay:', error)
             return { success: false, message: `Erro ao buscar pedidos: ${error.message}` }
-        }
-
-        if (!orders || orders.length === 0) {
-            return { success: true, message: 'Nenhum pedido encontrado no periodo com api_key_id.', data: { total: 0, sent: 0, errors: 0 } }
-        }
-
-        let sent = 0
-        let errors = 0
-
-        for (const order of orders) {
-            try {
-                await fireWebhookByKdi(String(order.kdi), order.status)
-                sent++
-                // Delay configurável para não sobrecarregar o servidor/parceiro
-                if (delayMs > 0) {
-                    await new Promise(resolve => setTimeout(resolve, delayMs))
-                }
-            } catch {
-                errors++
-                console.error(`[replay] Erro no KDI ${order.kdi}`)
-            }
         }
 
         return {
             success: true,
-            message: `Replay concluido: ${sent} enviados, ${errors} erros de ${orders.length} pedidos.`,
-            data: { total: orders.length, sent, errors }
+            message: `${orders?.length || 0} pedidos encontrados`,
+            data: orders || []
         }
     } catch (error) {
-        console.error('Erro no replay de webhooks:', error)
-        return { success: false, message: 'Erro inesperado no replay.' }
+        console.error('Erro ao listar pedidos para replay:', error)
+        return { success: false, message: 'Erro inesperado.' }
+    }
+}
+
+/**
+ * Envia webhook para UM pedido (chamado pelo client um por um).
+ */
+export async function replaySingleWebhook(kdi: string, status: string): Promise<ActionResponse<null>> {
+    const userClient = await createClient()
+    const { data: { user }, error: authError } = await userClient.auth.getUser()
+    if (authError || !user) {
+        return { success: false, message: 'Usuario nao autenticado.' }
+    }
+
+    try {
+        await fireWebhookByKdi(kdi, status)
+        return { success: true, message: `OK KDI ${kdi}`, data: null }
+    } catch (error) {
+        const msg = error instanceof Error ? error.message : 'Erro desconhecido'
+        return { success: false, message: `Erro KDI ${kdi}: ${msg}` }
     }
 }

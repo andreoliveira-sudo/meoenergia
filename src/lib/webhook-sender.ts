@@ -6,6 +6,7 @@
  * Usado por:
  * - batch-manager.ts (automação RevoCred)
  * - update-status/route.ts (callback RevoCred)
+ * - resend-webhook.ts (replay em massa)
  * - update-order-status.ts já tem lógica própria inline (NÃO usar este módulo lá)
  *
  * Este módulo NÃO depende de "use server" nem de Next.js server actions.
@@ -31,9 +32,11 @@ function calculateInstallment(presentValue: number, rate: number, periods: numbe
 /* ─── Main: dispara webhook para pedido por KDI ─── */
 
 export async function fireWebhookByKdi(kdi: string, newStatus: string): Promise<void> {
-	try {
-		const supabase = getAdminClient() as any
+	const supabase = getAdminClient() as any
+	let webhookUrl = "unknown"
+	let apiKeyId: string | null = null
 
+	try {
 		// 1. Buscar pedido pelo KDI para obter id e api_key_id
 		const { data: order, error: orderErr } = await supabase
 			.from("orders")
@@ -47,9 +50,10 @@ export async function fireWebhookByKdi(kdi: string, newStatus: string): Promise<
 		}
 
 		if (!order.api_key_id) {
-			// Pedido não foi criado via API, não tem webhook para disparar
 			return
 		}
+
+		apiKeyId = order.api_key_id
 
 		// 2. Buscar webhook_url da API key
 		const { data: apiKeyData } = await supabase
@@ -63,7 +67,9 @@ export async function fireWebhookByKdi(kdi: string, newStatus: string): Promise<
 			return
 		}
 
-		// 3. Buscar dados completos do pedido para o payload
+		webhookUrl = apiKeyData.webhook_url
+
+		// 3. Buscar dados completos do pedido — query segura (sem !inner para não falhar se customer missing)
 		const { data: fullOrder, error: fetchErr } = await supabase
 			.from("orders")
 			.select(`
@@ -72,37 +78,92 @@ export async function fireWebhookByKdi(kdi: string, newStatus: string): Promise<
 				created_at, updated_at, status,
 				payment_day, financing_term, monthly_bill_value, notes,
 				api_key_id,
-				customers!inner (
-					id, type, cpf, cnpj, name, company_name,
-					contact_name, contact_email, contact_phone,
-					city, state, postal_code, street, number, neighborhood, complement,
-					marital_status, birth_date, gender, occupation,
-					partners ( id, contact_name, legal_business_name )
-				),
-				sellers:seller_id ( id, name )
+				customer_id,
+				seller_id
 			`)
 			.eq("id", order.id)
 			.single()
 
-		if (fetchErr || !fullOrder || !fullOrder.customers) {
-			console.error(`[webhook-sender] Erro ao buscar dados completos do pedido ${order.id}:`, fetchErr?.message)
+		if (fetchErr || !fullOrder) {
+			console.error(`[webhook-sender] Erro ao buscar pedido ${order.id}:`, fetchErr?.message)
+			await logWebhookError(supabase, apiKeyId, webhookUrl, newStatus, `Erro ao buscar pedido: ${fetchErr?.message || "not found"}`)
 			return
 		}
 
-		// 4. Buscar taxas para cálculo de simulação
+		// 4. Buscar customer separadamente (mais seguro que join !inner)
+		let cust: Record<string, unknown> | null = null
+		if (fullOrder.customer_id) {
+			const { data: customerData, error: custErr } = await supabase
+				.from("customers")
+				.select("id, type, cpf, cnpj, name, company_name, contact_name, contact_email, contact_phone, city, state, postal_code, street, number, neighborhood, complement, partner_id")
+				.eq("id", fullOrder.customer_id)
+				.single()
+
+			if (custErr) {
+				console.error(`[webhook-sender] Erro ao buscar customer ${fullOrder.customer_id}:`, custErr.message)
+			} else {
+				cust = customerData
+			}
+
+			// Tentar buscar campos extras (marital_status, birth_date, gender, occupation) separadamente
+			// Esses campos podem não existir em PROD
+			if (cust) {
+				try {
+					const { data: extraFields } = await supabase
+						.from("customers")
+						.select("marital_status, birth_date, gender, occupation")
+						.eq("id", fullOrder.customer_id)
+						.single()
+					if (extraFields) {
+						cust = { ...cust, ...extraFields }
+					}
+				} catch {
+					// Campos não existem no banco — ok, ignorar
+				}
+			}
+		}
+
+		if (!cust) {
+			console.error(`[webhook-sender] Customer não encontrado para pedido ${order.id}`)
+			await logWebhookError(supabase, apiKeyId, webhookUrl, newStatus, `Customer não encontrado para pedido ${order.id}`)
+			return
+		}
+
+		// 5. Buscar partner se tiver
+		let partnerData: Record<string, unknown> | null = null
+		if (cust.partner_id) {
+			const { data: pData } = await supabase
+				.from("partners")
+				.select("id, contact_name, legal_business_name")
+				.eq("id", cust.partner_id)
+				.single()
+			partnerData = pData
+		}
+
+		// 6. Buscar seller se tiver
+		let sellerData: Record<string, unknown> | null = null
+		if (fullOrder.seller_id) {
+			const { data: sData } = await supabase
+				.from("sellers")
+				.select("id, name")
+				.eq("id", fullOrder.seller_id)
+				.single()
+			sellerData = sData
+		}
+
+		// 7. Buscar taxas para cálculo de simulação
 		const { data: settings } = await supabase
 			.from("settings")
 			.select("*")
 			.single()
 
-		// 5. Montar payload (mesmo formato do update-order-status.ts)
-		const cust = fullOrder.customers
+		// 8. Montar payload
 		const isPj = cust.type === "pj"
 		const document = isPj ? (cust.cnpj || "") : (cust.cpf || "")
 		const customerName = isPj ? (cust.company_name || "") : (cust.name || "")
 
 		const formattedBirthDate = cust.birth_date
-			? new Date(cust.birth_date).toISOString().split("T")[0]
+			? new Date(String(cust.birth_date)).toISOString().split("T")[0]
 			: null
 
 		const orderData: Record<string, unknown> = {
@@ -147,19 +208,19 @@ export async function fireWebhookByKdi(kdi: string, newStatus: string): Promise<
 					city: cust.city || "",
 					state: cust.state || "",
 				},
-				...(cust.partners
+				...(partnerData
 					? {
 						partner: {
-							contact_name: cust.partners.contact_name || "",
-							legal_business_name: cust.partners.legal_business_name || "",
+							contact_name: partnerData.contact_name || "",
+							legal_business_name: partnerData.legal_business_name || "",
 						},
 					}
 					: {}),
 			},
-			sellers: fullOrder.sellers ? { name: fullOrder.sellers.name || "" } : null,
+			sellers: sellerData ? { name: sellerData.name || "" } : null,
 		}
 
-		// 6. Calcular simulação (se tiver taxas)
+		// 9. Calcular simulação (se tiver taxas)
 		if (settings) {
 			const equipVal = fullOrder.equipment_value || 0
 			const laborVal = fullOrder.labor_value || 0
@@ -196,7 +257,7 @@ export async function fireWebhookByKdi(kdi: string, newStatus: string): Promise<
 			}
 		}
 
-		// 7. Enviar webhook
+		// 10. Enviar webhook
 		const eventType = `order.status.${newStatus}`
 		const webhookPayload = {
 			event: eventType,
@@ -204,9 +265,9 @@ export async function fireWebhookByKdi(kdi: string, newStatus: string): Promise<
 			data: orderData,
 		}
 
-		console.log(`[webhook-sender] Enviando webhook ${eventType} para ${apiKeyData.webhook_url} (KDI: ${kdi})`)
+		console.log(`[webhook-sender] Enviando webhook ${eventType} para ${webhookUrl} (KDI: ${kdi})`)
 
-		const response = await fetch(apiKeyData.webhook_url, {
+		const response = await fetch(webhookUrl, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -218,10 +279,10 @@ export async function fireWebhookByKdi(kdi: string, newStatus: string): Promise<
 
 		const responseText = await response.text().catch(() => "")
 
-		// 8. Logar resultado
+		// 11. Logar resultado
 		await supabase.from("api_key_webhook_logs").insert({
-			api_key_id: order.api_key_id,
-			url: apiKeyData.webhook_url,
+			api_key_id: apiKeyId,
+			url: webhookUrl,
 			event_type: eventType,
 			status_code: response.status,
 			success: response.ok,
@@ -230,28 +291,35 @@ export async function fireWebhookByKdi(kdi: string, newStatus: string): Promise<
 			payload: JSON.parse(JSON.stringify(webhookPayload)),
 		})
 
-		console.log(`[webhook-sender] Webhook ${response.ok ? "enviado" : "falhou"} (${response.status}) para ${apiKeyData.webhook_url}`)
+		console.log(`[webhook-sender] Webhook ${response.ok ? "enviado" : "falhou"} (${response.status}) para ${webhookUrl}`)
 	} catch (error) {
-		console.error("[webhook-sender] Erro ao disparar webhook:", error)
+		const errMsg = error instanceof Error ? error.message : "Unknown error"
+		console.error(`[webhook-sender] Erro ao disparar webhook KDI ${kdi}:`, errMsg)
 
-		// Tentar logar o erro
-		try {
-			const supabase = getAdminClient() as any
-			// Buscar api_key_id do pedido para logar
-			const { data: order } = await supabase.from("orders").select("api_key_id").eq("kdi", kdi).single()
-			if (order?.api_key_id) {
-				await supabase.from("api_key_webhook_logs").insert({
-					api_key_id: order.api_key_id,
-					url: "unknown",
-					event_type: `order.status.${newStatus}`,
-					status_code: 0,
-					success: false,
-					error_message: error instanceof Error ? error.message : "Unknown error",
-					payload: null,
-				})
-			}
-		} catch {
-			// Silenciar erro do log — não travar o fluxo principal
-		}
+		await logWebhookError(supabase, apiKeyId, webhookUrl, newStatus, errMsg)
+	}
+}
+
+/** Helper para logar erros de webhook de forma consistente */
+async function logWebhookError(
+	supabase: ReturnType<typeof createClient>,
+	apiKeyId: string | null,
+	url: string,
+	status: string,
+	errorMessage: string
+) {
+	try {
+		if (!apiKeyId) return
+		await (supabase as any).from("api_key_webhook_logs").insert({
+			api_key_id: apiKeyId,
+			url,
+			event_type: `order.status.${status}`,
+			status_code: 0,
+			success: false,
+			error_message: errorMessage,
+			payload: null,
+		})
+	} catch {
+		// Silenciar — não travar fluxo principal
 	}
 }
