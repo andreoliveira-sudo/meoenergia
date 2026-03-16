@@ -151,14 +151,26 @@ export async function fireWebhookByKdi(kdi: string, newStatus: string): Promise<
 			sellerData = sData
 		}
 
-		// 7. Buscar taxas para cálculo de simulação
-		const { data: settings } = await supabase
-			.from("settings")
-			.select("*")
-			.single()
+		// 7. Buscar taxas para cálculo de simulação (tabela rates, não settings)
+		const isPj = cust.type === "pj"
+		const rateIds = isPj
+			? ["pj_interest_rate_24", "pj_interest_rate_36", "pj_interest_rate_48", "pj_interest_rate_60", "pj_management_fee", "pj_service_fee"]
+			: ["pf_interest_rate_24", "pf_interest_rate_30", "pf_interest_rate_36", "pf_interest_rate_48", "pf_interest_rate_60", "pf_interest_rate_72", "pf_interest_rate_84", "pf_interest_rate_96", "pf_management_fee", "pf_service_fee"]
+
+		const { data: ratesRows } = await supabase
+			.from("rates")
+			.select("id, value")
+			.in("id", rateIds)
+
+		// Transformar array em objeto { id: value }
+		const rates: Record<string, number> = {}
+		if (ratesRows && ratesRows.length > 0) {
+			for (const r of ratesRows) {
+				rates[r.id] = Number(r.value) || 0
+			}
+		}
 
 		// 8. Montar payload
-		const isPj = cust.type === "pj"
 		const document = isPj ? (cust.cnpj || "") : (cust.cpf || "")
 		const customerName = isPj ? (cust.company_name || "") : (cust.name || "")
 
@@ -220,27 +232,41 @@ export async function fireWebhookByKdi(kdi: string, newStatus: string): Promise<
 			sellers: sellerData ? { name: sellerData.name || "" } : null,
 		}
 
-		// 9. Calcular simulação (se tiver taxas)
-		if (settings) {
+		// 9. Calcular simulação (se tiver taxas na tabela rates)
+		if (Object.keys(rates).length > 0) {
 			const equipVal = fullOrder.equipment_value || 0
 			const laborVal = fullOrder.labor_value || 0
 			const otherVal = fullOrder.other_costs || 0
 			const investmentValue = equipVal + laborVal + otherVal
 
-			const mgmtPct = isPj ? (settings.pj_management_fee || 4) : (settings.pf_management_fee || 8)
+			const mgmtPct = isPj ? (rates.pj_management_fee || 4) : (rates.pf_management_fee || 8)
 			const mgmtVal = investmentValue * (mgmtPct / 100)
-			const svcPct = isPj ? (settings.pj_service_fee || 8) : (settings.pf_service_fee || 8)
+			const svcPct = isPj ? (rates.pj_service_fee || 8) : (rates.pf_service_fee || 8)
 			const svcVal = (investmentValue + mgmtVal) * (svcPct / 100)
 			const totalInvestment = investmentValue + mgmtVal + svcVal
 
 			const months = isPj ? [24, 36, 48, 60] : [24, 30, 36, 48, 60, 72, 84, 96]
-			const rateKeys: Record<number, string> = isPj
-				? { 24: "pj_interest_rate_24", 36: "pj_interest_rate_36", 48: "pj_interest_rate_48", 60: "pj_interest_rate_60" }
-				: { 24: "pf_interest_rate_24", 30: "pf_interest_rate_30", 36: "pf_interest_rate_36", 48: "pf_interest_rate_48", 60: "pf_interest_rate_60", 72: "pf_interest_rate_72", 84: "pf_interest_rate_84", 96: "pf_interest_rate_96" }
+			const monthlyRates: Record<number, number> = isPj
+				? {
+					24: rates.pj_interest_rate_24 || 2.5,
+					36: rates.pj_interest_rate_36 || 2.5,
+					48: rates.pj_interest_rate_48 || 2.5,
+					60: rates.pj_interest_rate_60 || 2.5,
+				}
+				: {
+					24: rates.pf_interest_rate_24 || 1.49,
+					30: rates.pf_interest_rate_30 || 1.49,
+					36: rates.pf_interest_rate_36 || 1.60,
+					48: rates.pf_interest_rate_48 || 1.64,
+					60: rates.pf_interest_rate_60 || 1.68,
+					72: rates.pf_interest_rate_72 || 1.72,
+					84: rates.pf_interest_rate_84 || 1.76,
+					96: rates.pf_interest_rate_96 || 1.80,
+				}
 
 			const defaultRate = isPj ? 2.5 : 1.5
 			const installments = months.map((m) => {
-				const ratePct = settings[rateKeys[m]] || defaultRate
+				const ratePct = monthlyRates[m] || defaultRate
 				const rate = ratePct / 100
 				const monthly = calculateInstallment(totalInvestment, rate, m)
 				return { term_months: m, interest_rate_percent: ratePct, monthly_installment: Number(monthly.toFixed(2)) }
