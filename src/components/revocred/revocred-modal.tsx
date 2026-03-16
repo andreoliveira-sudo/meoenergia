@@ -153,7 +153,7 @@ export default function RevocredModal() {
   const [useCurrentDate, setUseCurrentDate] = useState(true); // default: always use today
   const [batchStatus, setBatchStatus] = useState("analysis_pending");
   const [batchStepDelay, setBatchStepDelay] = useState(3);
-  const [batchInterval, setBatchInterval] = useState(5);
+  const [batchInterval, setBatchInterval] = useState(60);
   const [batchOrders, setBatchOrders] = useState<PendingOrder[]>([]);
   const [batchResults, setBatchResults] = useState<BatchResult[]>([]);
   const [batchRunning, setBatchRunning] = useState(false);
@@ -1026,14 +1026,14 @@ export default function RevocredModal() {
                   <label className="text-sm text-gray-600 w-32">Intervalo pedidos:</label>
                   <input
                     type="number"
-                    min={1}
-                    max={120}
+                    min={5}
+                    max={7200}
                     value={batchInterval}
-                    onChange={(e) => setBatchInterval(Math.max(1, Math.min(120, Number(e.target.value))))}
+                    onChange={(e) => setBatchInterval(Math.max(5, Math.min(7200, Number(e.target.value))))}
                     disabled={batchRunning}
                     className="w-16 px-3 py-1.5 text-sm border border-gray-200 rounded-lg text-center disabled:opacity-50"
                   />
-                  <span className="text-sm text-gray-400">min entre cada pedido</span>
+                  <span className="text-sm text-gray-400">segundos entre cada pedido</span>
                 </div>
               </div>
 
@@ -1366,7 +1366,7 @@ export default function RevocredModal() {
                     )}
                   </div>
                   <p className="text-xs text-amber-500 mt-1">
-                    Intervalo: {batchInterval} min &middot; Pedidos processados: {batchCycleCount}
+                    Intervalo: {batchInterval}s &middot; Pedidos processados: {batchCycleCount}
                   </p>
                 </div>
               )}

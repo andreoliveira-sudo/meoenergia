@@ -78,7 +78,7 @@ const DEFAULT_STATE: BatchState = {
   batchDate: "",
   batchStatusFilter: "analysis_pending",
   batchStepDelay: 3,
-  batchInterval: 5,
+  batchInterval: 60,
   currentKdi: null,
   currentOrderIndex: 0,
   totalOrders: 0,
@@ -387,10 +387,10 @@ async function runBatchLoop() {
           state.status = "waiting";
           state.currentKdi = null;
           state.currentSteps = [];
-          const waitMs = state.batchInterval * 60 * 1000;
+          const waitMs = state.batchInterval * 1000;
           const nextTime = new Date(Date.now() + waitMs);
           state.nextRunAt = nextTime.toISOString();
-          console.log(`[BatchManager] No pending orders. Waiting ${state.batchInterval}min (${waitMs}ms). Next: ${nextTime.toISOString()}`);
+          console.log(`[BatchManager] No pending orders. Waiting ${state.batchInterval}s (${waitMs}ms). Next: ${nextTime.toISOString()}`);
 
           syncActivity({
             status: "waiting",
@@ -403,7 +403,7 @@ async function runBatchLoop() {
             g.__batchTimer = setTimeout(() => {
               state.nextRunAt = null;
               resolve();
-            }, state.batchInterval * 60 * 1000);
+            }, state.batchInterval * 1000);
           });
 
           if (g.__batchAbort) break;
@@ -509,10 +509,10 @@ async function runBatchLoop() {
         state.status = "waiting";
         state.currentKdi = null;
         state.currentSteps = [];
-        const waitMs = state.batchInterval * 60 * 1000;
+        const waitMs = state.batchInterval * 1000;
         const nextTime = new Date(Date.now() + waitMs);
         state.nextRunAt = nextTime.toISOString();
-        console.log(`[BatchManager] Order done. Waiting ${state.batchInterval}min (${waitMs}ms). Next: ${nextTime.toISOString()}`);
+        console.log(`[BatchManager] Order done. Waiting ${state.batchInterval}s (${waitMs}ms). Next: ${nextTime.toISOString()}`);
 
         syncActivity({
           status: "waiting",
@@ -524,7 +524,7 @@ async function runBatchLoop() {
           g.__batchTimer = setTimeout(() => {
             state.nextRunAt = null;
             resolve();
-          }, state.batchInterval * 60 * 1000);
+          }, state.batchInterval * 1000);
         });
 
         if (g.__batchAbort) break;
