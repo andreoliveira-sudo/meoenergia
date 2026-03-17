@@ -337,7 +337,19 @@ export async function GET(request: Request) {
 
         sendEvent("fill_form", "done", "Formulario preenchido com sucesso");
 
-        // ─── f) Click Simular ───
+        // ─── f) Close stale modals BEFORE simulating (clear old results) ───
+        await page.evaluate(() => {
+          const closeButtons = Array.from(document.querySelectorAll('a, button'));
+          for (const btn of closeButtons) {
+            const txt = btn.textContent?.trim();
+            if (txt === "X" || txt === "×") {
+              (btn as HTMLElement).click();
+            }
+          }
+        });
+        await wait(1000);
+
+        // ─── g) Click Simular ───
         sendEvent("simulate", "running", "Clicando em Simular...");
 
         await page.evaluate(() => {
@@ -347,11 +359,11 @@ export async function GET(request: Request) {
           );
           if (btn) btn.click();
         });
-        await wait(stepDelay * 1500);
+        await wait(stepDelay * 2000);
 
         sendEvent("simulate", "done", "Simulacao enviada");
 
-        // ─── g) Handle authorization modal ───
+        // ─── h) Handle authorization modal ───
         sendEvent("authorization", "running", "Aguardando autorizacao...");
 
         try {
@@ -374,21 +386,10 @@ export async function GET(request: Request) {
           );
         }
 
-        // ─── h) Read result ───
+        // ─── i) Read result ───
         sendEvent("read_result", "running", "Lendo resultado...");
 
-        // Close any stale modals from previous simulations before reading
-        await page.evaluate(() => {
-          const closeButtons = Array.from(document.querySelectorAll('a, button'));
-          for (const btn of closeButtons) {
-            if (btn.textContent?.trim() === "X" || btn.textContent?.trim() === "×") {
-              (btn as HTMLElement).click();
-            }
-          }
-        });
-        await wait(1000);
-
-        // Wait for result to appear (up to 15s)
+        // Wait for result to appear (up to 20s after authorization)
         try {
           await page.waitForFunction(
             () => {
@@ -397,18 +398,19 @@ export async function GET(request: Request) {
                 body.includes("Parabéns") ||
                 body.includes("parabens") ||
                 body.includes("pré-aprovado") ||
-                body.includes("aprovado") ||
+                body.includes("Crédito aprovado") ||
                 body.includes("Não encontramos") ||
                 body.includes("nao encontramos") ||
-                body.includes("Crédito aprovado") ||
                 body.includes("negado") ||
                 body.includes("reprovado")
               );
             },
-            { timeout: 15000 }
+            { timeout: 20000 }
           );
         } catch {
-          // Timeout waiting for result — will read whatever is on page
+          // Timeout — capture page text for debugging
+          const pageText = await page.evaluate(() => document.body.innerText?.substring(0, 500) || "");
+          sendEvent("read_result", "running", `Timeout aguardando resultado. Texto na pagina: ${pageText.substring(0, 300)}`);
         }
         await wait(stepDelay * 1000);
 
