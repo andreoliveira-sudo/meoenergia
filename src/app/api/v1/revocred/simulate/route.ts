@@ -109,7 +109,6 @@ export async function GET(request: Request) {
         const systemPower = order.system_power as number;
         const equipmentValue = order.equipment_value as number;
         const laborValue = order.labor_value as number;
-        const monthlyBillValue = order.monthly_bill_value as number;
         const orderKdi = order.kdi as string;
 
         sendEvent(
@@ -207,12 +206,10 @@ export async function GET(request: Request) {
         sendEvent("navigate", "done", "Pagina de simulacao carregada");
 
         // ─── e) Fill form ───
-        // RevoCred uses Livewire — inputs have NO name attributes.
-        // We identify fields by placeholder text and position (mapped from real DOM).
-        // Input order: [0]=hidden _token, [1]=search distribuidor, [2]=conta luz,
-        //              [3]=CPF/CNPJ, [4]=kWp(number), [5]=valor produtos,
-        //              [6]=valor mao obra, [7]=codigo pedido
-        // Select order: [0]=product selector(top), [1]=data primeira parcela
+        // RevoCred uses Livewire — fields identified by placeholder/label text.
+        // Layout (Mar 2026): Distribuidor, CPF/CNPJ, Código pedido,
+        //   Data 1a parcela, kWp, Valor produtos, Valor mão de obra
+        // NOTE: "Conta de luz" field was removed from the form.
 
         sendEvent("fill_form", "running", "Selecionando distribuidor Sol+...");
 
@@ -228,7 +225,7 @@ export async function GET(request: Request) {
         });
         await wait(stepDelay * 1000);
 
-        // Type "Sol+" in the search input that appeared (input index 1)
+        // Type "Sol+" in the search input that appeared
         const searchInput = await page.$('input[placeholder*="Buscar"]');
         if (searchInput) {
           await searchInput.type("Sol+", { delay: 80 });
@@ -245,68 +242,56 @@ export async function GET(request: Request) {
         });
         await wait(stepDelay * 1000);
 
-        sendEvent("fill_form", "running", "Preenchendo conta de luz...");
-
-        // Conta de luz — input with placeholder "R$ 0,00" (index 2)
-        const inputs = await page.$$("input");
-        if (inputs[2]) {
-          await inputs[2].click({ clickCount: 3 });
-          await inputs[2].type(formatBRL(monthlyBillValue), { delay: 60 });
-        }
-        await wait(stepDelay * 1000);
-
         sendEvent("fill_form", "running", "Preenchendo CPF/CNPJ...");
 
-        // CPF/CNPJ — input with placeholder "CPF/CNPJ" (index 3)
+        // CPF/CNPJ — find by placeholder
         const formattedDoc =
           cpfCnpj.replace(/\D/g, "").length === 11
             ? formatCPF(cpfCnpj)
             : cpfCnpj;
-        if (inputs[3]) {
-          await inputs[3].click();
-          await inputs[3].type(formattedDoc, { delay: 60 });
-        }
-        await wait(stepDelay * 1000);
-
-        sendEvent("fill_form", "running", "Preenchendo kWp do sistema...");
-
-        // kWp — number input (index 4)
-        if (inputs[4]) {
-          await inputs[4].click({ clickCount: 3 });
-          await inputs[4].type(String(systemPower), { delay: 60 });
-        }
-        await wait(stepDelay * 1000);
-
-        sendEvent("fill_form", "running", "Preenchendo valor dos equipamentos...");
-
-        // Valor dos produtos (index 5)
-        if (inputs[5]) {
-          await inputs[5].click({ clickCount: 3 });
-          await inputs[5].type(formatBRL(equipmentValue), { delay: 60 });
-        }
-        await wait(stepDelay * 1000);
-
-        sendEvent("fill_form", "running", "Preenchendo valor mao de obra...");
-
-        // Valor mao de obra (index 6)
-        if (inputs[6]) {
-          await inputs[6].click({ clickCount: 3 });
-          await inputs[6].type(formatBRL(laborValue), { delay: 60 });
+        const cpfInput = await page.$('input[placeholder="CPF/CNPJ"]');
+        if (cpfInput) {
+          await cpfInput.click();
+          await cpfInput.type(formattedDoc, { delay: 60 });
         }
         await wait(stepDelay * 1000);
 
         sendEvent("fill_form", "running", "Preenchendo codigo do pedido...");
 
-        // Codigo do pedido (index 7)
-        if (inputs[7]) {
-          await inputs[7].click({ clickCount: 3 });
-          await inputs[7].type(String(orderKdi), { delay: 60 });
-        }
+        // Código do pedido — find by label "Código do pedido"
+        await page.evaluate((kdi: string) => {
+          const labels = Array.from(document.querySelectorAll("label"));
+          for (const lbl of labels) {
+            const text = lbl.textContent?.toLowerCase() || "";
+            if (text.includes("digo") && text.includes("pedido")) {
+              const parent = lbl.parentElement;
+              const inp = parent?.querySelector("input") as HTMLInputElement | null;
+              if (inp) {
+                inp.focus();
+                inp.value = "";
+                inp.dispatchEvent(new Event("input", { bubbles: true }));
+                inp.value = kdi;
+                inp.dispatchEvent(new Event("input", { bubbles: true }));
+                inp.dispatchEvent(new Event("change", { bubbles: true }));
+                return;
+              }
+            }
+          }
+          // Fallback: text input with placeholder "0"
+          const inputs = Array.from(document.querySelectorAll('input[placeholder="0"]'));
+          const inp = inputs.find((i) => i.getAttribute("type") !== "number") as HTMLInputElement | null;
+          if (inp) {
+            inp.focus();
+            inp.value = kdi;
+            inp.dispatchEvent(new Event("input", { bubbles: true }));
+            inp.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+        }, String(orderKdi));
         await wait(stepDelay * 1000);
 
         sendEvent("fill_form", "running", "Selecionando data da primeira parcela...");
 
-        // Data da primeira parcela — native <select>, pick first available (index 1)
+        // Data da primeira parcela — select with date options
         await page.evaluate(() => {
           const selects = Array.from(document.querySelectorAll("select"));
           const parcelaSel = selects.find((s) =>
@@ -317,6 +302,37 @@ export async function GET(request: Request) {
             parcelaSel.dispatchEvent(new Event("change", { bubbles: true }));
           }
         });
+        await wait(stepDelay * 1000);
+
+        sendEvent("fill_form", "running", "Preenchendo kWp do sistema...");
+
+        // kWp — number input
+        const kwpInput = await page.$('input[type="number"]');
+        if (kwpInput) {
+          await kwpInput.click({ clickCount: 3 });
+          await kwpInput.type(String(systemPower), { delay: 60 });
+        }
+        await wait(stepDelay * 1000);
+
+        sendEvent("fill_form", "running", "Preenchendo valor dos equipamentos...");
+
+        // Valor dos produtos e Valor mão de obra — find by placeholder "R$ 0,00"
+        const rInputs = await page.$$('input[placeholder="R$ 0,00"]');
+
+        // Valor dos produtos (first R$ input)
+        if (rInputs[0]) {
+          await rInputs[0].click({ clickCount: 3 });
+          await rInputs[0].type(formatBRL(equipmentValue), { delay: 60 });
+        }
+        await wait(stepDelay * 1000);
+
+        sendEvent("fill_form", "running", "Preenchendo valor mao de obra...");
+
+        // Valor mão de obra (second R$ input)
+        if (rInputs[1]) {
+          await rInputs[1].click({ clickCount: 3 });
+          await rInputs[1].type(formatBRL(laborValue), { delay: 60 });
+        }
         await wait(stepDelay * 1000);
 
         sendEvent("fill_form", "done", "Formulario preenchido com sucesso");
@@ -361,14 +377,59 @@ export async function GET(request: Request) {
         // ─── h) Read result ───
         sendEvent("read_result", "running", "Lendo resultado...");
 
+        // Close any stale modals from previous simulations before reading
+        await page.evaluate(() => {
+          const closeButtons = Array.from(document.querySelectorAll('a, button'));
+          for (const btn of closeButtons) {
+            if (btn.textContent?.trim() === "X" || btn.textContent?.trim() === "×") {
+              (btn as HTMLElement).click();
+            }
+          }
+        });
+        await wait(1000);
+
+        // Wait for result to appear (up to 15s)
+        try {
+          await page.waitForFunction(
+            () => {
+              const body = document.body.innerText || "";
+              return (
+                body.includes("Parabéns") ||
+                body.includes("parabens") ||
+                body.includes("pré-aprovado") ||
+                body.includes("aprovado") ||
+                body.includes("Não encontramos") ||
+                body.includes("nao encontramos") ||
+                body.includes("Crédito aprovado") ||
+                body.includes("negado") ||
+                body.includes("reprovado")
+              );
+            },
+            { timeout: 15000 }
+          );
+        } catch {
+          // Timeout waiting for result — will read whatever is on page
+        }
+        await wait(stepDelay * 1000);
+
         const result = await page.evaluate(() => {
           const body = document.body.innerText || "";
 
-          if (body.includes("Não encontramos") || body.includes("nao encontramos")) {
+          // Check rejection first (more specific)
+          if (
+            body.includes("Não encontramos") ||
+            body.includes("nao encontramos") ||
+            body.includes("negado") ||
+            body.includes("reprovado")
+          ) {
             return { status: "REPROVADO", parcelas: [] as Array<{prazo: string; valor: string; taxa: string}> };
           }
 
+          // Check approval (broader — "Parabéns", "Crédito aprovado", "pré-aprovado")
           if (
+            body.includes("Parabéns") ||
+            body.includes("parabens") ||
+            body.includes("Crédito aprovado") ||
             body.includes("pré-aprovado") ||
             body.includes("pre-aprovado") ||
             body.includes("aprovado")
