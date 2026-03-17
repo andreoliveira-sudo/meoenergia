@@ -108,8 +108,21 @@ export async function GET(request: Request) {
           (customer?.cpf as string) || (customer?.cnpj as string) || "";
         const systemPower = order.system_power as number;
         const equipmentValue = order.equipment_value as number;
-        const laborValue = order.labor_value as number;
+        const rawLaborValue = order.labor_value as number;
         const orderKdi = order.kdi as string;
+
+        // RevoCred exige mão de obra entre 30% e 50% do valor dos produtos
+        // Se estiver fora do limite, cap no máximo permitido (50%)
+        const maxLabor = equipmentValue * 0.50;
+        const minLabor = equipmentValue * 0.30;
+        let laborValue = rawLaborValue;
+        if (rawLaborValue > maxLabor) {
+          laborValue = maxLabor;
+          sendEvent("fill_form", "running", `Mao de obra ajustada de ${formatBRL(rawLaborValue)} para ${formatBRL(maxLabor)} (limite 50% RevoCred)`);
+        } else if (rawLaborValue < minLabor && rawLaborValue > 0) {
+          laborValue = minLabor;
+          sendEvent("fill_form", "running", `Mao de obra ajustada de ${formatBRL(rawLaborValue)} para ${formatBRL(minLabor)} (minimo 30% RevoCred)`);
+        }
 
         sendEvent(
           "fetch_order",
@@ -402,7 +415,10 @@ export async function GET(request: Request) {
                 body.includes("Não encontramos") ||
                 body.includes("nao encontramos") ||
                 body.includes("negado") ||
-                body.includes("reprovado")
+                body.includes("reprovado") ||
+                body.includes("deve estar entre") ||
+                body.includes("campo obrigatório") ||
+                body.includes("campo obrigat")
               );
             },
             { timeout: 20000 }
@@ -411,6 +427,32 @@ export async function GET(request: Request) {
           // Timeout — capture page text for debugging
           const pageText = await page.evaluate(() => document.body.innerText?.substring(0, 500) || "");
           sendEvent("read_result", "running", `Timeout aguardando resultado. Texto na pagina: ${pageText.substring(0, 300)}`);
+        }
+
+        // Check for validation errors BEFORE reading result
+        const validationError = await page.evaluate(() => {
+          const body = document.body.innerText || "";
+          if (body.includes("deve estar entre") || body.includes("campo obrigat")) {
+            // Extract validation messages
+            const spans = Array.from(document.querySelectorAll("span, p, div"));
+            const errors = spans
+              .map((s) => s.textContent?.trim() || "")
+              .filter((t) => t.includes("deve estar entre") || t.includes("campo obrigat"))
+              .slice(0, 3);
+            return errors.join(" | ") || "Erro de validacao no formulario";
+          }
+          return null;
+        });
+
+        if (validationError) {
+          sendEvent("read_result", "done", JSON.stringify({
+            resultado: "ERRO_VALIDACAO",
+            motivo: validationError,
+          }));
+          sendEvent("complete", "done", "Simulacao finalizada com erro de validacao");
+          if (browser) { try { await browser.close(); } catch {} }
+          controller.close();
+          return;
         }
         await wait(stepDelay * 1000);
 
