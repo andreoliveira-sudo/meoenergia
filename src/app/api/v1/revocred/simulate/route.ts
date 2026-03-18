@@ -112,16 +112,18 @@ export async function GET(request: Request) {
         const orderKdi = order.kdi as string;
 
         // RevoCred exige mão de obra entre 30% e 50% do valor dos produtos
-        // Se estiver fora do limite, cap no máximo permitido (50%)
-        const maxLabor = equipmentValue * 0.50;
-        const minLabor = equipmentValue * 0.30;
+        // A validação é ESTRITA (< 50%, > 30%), valor exato na borda é rejeitado
+        // Usamos 49% como teto e 31% como piso para ficar seguro
+        const maxLabor = equipmentValue * 0.49;
+        const minLabor = equipmentValue * 0.31;
         let laborValue = rawLaborValue;
         if (rawLaborValue > maxLabor) {
-          laborValue = maxLabor;
-          sendEvent("fill_form", "running", `Mao de obra ajustada de ${formatBRL(rawLaborValue)} para ${formatBRL(maxLabor)} (limite 50% RevoCred)`);
+          // Cap em 45% (meio seguro entre 30-50%)
+          laborValue = Math.round(equipmentValue * 0.45 * 100) / 100;
+          sendEvent("fill_form", "running", `Mao de obra ajustada de ${formatBRL(rawLaborValue)} para ${formatBRL(laborValue)} (cap 45% RevoCred)`);
         } else if (rawLaborValue < minLabor && rawLaborValue > 0) {
-          laborValue = minLabor;
-          sendEvent("fill_form", "running", `Mao de obra ajustada de ${formatBRL(rawLaborValue)} para ${formatBRL(minLabor)} (minimo 30% RevoCred)`);
+          laborValue = Math.round(equipmentValue * 0.31 * 100) / 100;
+          sendEvent("fill_form", "running", `Mao de obra ajustada de ${formatBRL(rawLaborValue)} para ${formatBRL(laborValue)} (min 31% RevoCred)`);
         }
 
         sendEvent(
