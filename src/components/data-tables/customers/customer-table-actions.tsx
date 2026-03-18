@@ -6,6 +6,7 @@ import { useState, useTransition } from "react"
 import { EditCustomerDialog } from "@/components/dialogs/edit-customer-dialog"
 import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 import { Button } from "@/components/ui/button"
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import type { CustomerWithRelations } from "@/lib/definitions/customers"
 import { useQueryClient } from "@tanstack/react-query"
@@ -13,6 +14,7 @@ import { deleteCustomer } from "@/actions/customers"
 
 export const CustomerTableActions = ({ customer }: { customer: CustomerWithRelations }) => {
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+	const [deleteOpen, setDeleteOpen] = useState(false)
 	const [isDeletePending, startDeleteTransition] = useTransition()
 	const queryClient = useQueryClient()
 	const { execute } = useOperationFeedback()
@@ -46,7 +48,7 @@ export const CustomerTableActions = ({ customer }: { customer: CustomerWithRelat
 
 				<Tooltip>
 					<TooltipTrigger asChild>
-						<Button className="delete-button" variant="ghost" size="icon" onClick={handleDelete} disabled={isDeletePending}>
+						<Button className="delete-button" variant="ghost" size="icon" onClick={() => setDeleteOpen(true)} disabled={isDeletePending}>
 							{isDeletePending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
 							<span className="sr-only">Deletar</span>
 						</Button>
@@ -56,6 +58,14 @@ export const CustomerTableActions = ({ customer }: { customer: CustomerWithRelat
 			</div>
 
 			<EditCustomerDialog customerId={customer.id} customerType={customer.type} open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} />
+			<ConfirmDeleteDialog
+				open={deleteOpen}
+				onOpenChange={setDeleteOpen}
+				onConfirm={handleDelete}
+				title="Excluir Cliente"
+				description="Tem certeza que deseja excluir este cliente?"
+				loading={isDeletePending}
+			/>
 		</>
 	)
 }

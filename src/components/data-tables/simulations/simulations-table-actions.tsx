@@ -16,6 +16,7 @@ import { UpdateStatusDialog } from "@/components/dialogs/update-status-dialog"
 import { ViewSimulationSheet } from "@/components/dialogs/view-simulation-sheet"
 import { QuickUploadDialog } from "@/components/dialogs/quick-upload-dialog"
 import { Button } from "@/components/ui/button"
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
 import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
@@ -37,6 +38,7 @@ export const SimulationsTableActions = ({ simulation }: { simulation: Simulation
 	const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false)
 	const [isManageRatesDialogOpen, setIsManageRatesDialogOpen] = useState(false)
 	const [isQuickUploadOpen, setIsQuickUploadOpen] = useState(false)
+	const [deleteOpen, setDeleteOpen] = useState(false)
 	const [isDeletePending, startDeleteTransition] = useTransition()
 	const [isCreateOrderPending, startCreateOrderTransition] = useTransition()
 	const [isPdfPending, startPdfTransition] = useTransition()
@@ -347,7 +349,7 @@ export const SimulationsTableActions = ({ simulation }: { simulation: Simulation
 
 						<Tooltip>
 							<TooltipTrigger asChild>
-								<Button className="delete-button" variant="ghost" size="icon" onClick={handleDelete} disabled={isDeletePending}>
+								<Button className="delete-button" variant="ghost" size="icon" onClick={() => setDeleteOpen(true)} disabled={isDeletePending}>
 									{isDeletePending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
 									<span className="sr-only">Deletar</span>
 								</Button>
@@ -358,6 +360,14 @@ export const SimulationsTableActions = ({ simulation }: { simulation: Simulation
 				)}
 			</div>
 
+			<ConfirmDeleteDialog
+				open={deleteOpen}
+				onOpenChange={setDeleteOpen}
+				onConfirm={handleDelete}
+				title="Excluir Simulação"
+				description="Tem certeza que deseja excluir esta simulação?"
+				loading={isDeletePending}
+			/>
 			<EditSimulationRatesDialog simulationId={simulation.id} open={isManageRatesDialogOpen} onOpenChange={setIsManageRatesDialogOpen} />
 			<EditSimulationDialog simulationId={simulation.id} open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} />
 			<ViewSimulationSheet simulationId={simulation.id} open={isViewSheetOpen} onOpenChange={setIsViewSheetOpen} />

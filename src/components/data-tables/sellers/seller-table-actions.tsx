@@ -7,6 +7,7 @@ import { approveSeller, deleteSeller, rejectSeller, setSellerActiveStatus } from
 import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 import { EditSellerDialog } from "@/components/dialogs/edit-seller-dialog"
 import { Button } from "@/components/ui/button"
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import type { Seller } from "@/lib/definitions/sellers"
 
@@ -14,6 +15,7 @@ const SellerActions = ({ seller }: { seller: Seller }) => {
 	const queryClient = useQueryClient()
 	const [isPending, startTransition] = useTransition()
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+	const [deleteOpen, setDeleteOpen] = useState(false)
 	const [isDeletePending, startDeleteTransition] = useTransition()
 	const { execute } = useOperationFeedback()
 
@@ -92,7 +94,7 @@ const SellerActions = ({ seller }: { seller: Seller }) => {
 
 					<Tooltip>
 						<TooltipTrigger asChild>
-							<Button className="delete-button" variant="ghost" size="icon" onClick={handleDelete} disabled={isDeletePending}>
+							<Button className="delete-button" variant="ghost" size="icon" onClick={() => setDeleteOpen(true)} disabled={isDeletePending}>
 								{isDeletePending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
 								<span className="sr-only">Deletar</span>
 							</Button>
@@ -146,6 +148,14 @@ const SellerActions = ({ seller }: { seller: Seller }) => {
 			</div>
 
 			<EditSellerDialog seller={seller} open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} />
+			<ConfirmDeleteDialog
+				open={deleteOpen}
+				onOpenChange={setDeleteOpen}
+				onConfirm={handleDelete}
+				title="Excluir Vendedor"
+				description="Tem certeza que deseja excluir este vendedor?"
+				loading={isDeletePending}
+			/>
 		</>
 	)
 }

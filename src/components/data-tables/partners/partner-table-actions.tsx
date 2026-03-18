@@ -8,6 +8,7 @@ import { ApprovePartnerDialog } from "@/components/dialogs/approve-partner-dialo
 import { EditPartnerDialog } from "@/components/dialogs/edit-partner-dialog"
 import { useOperationFeedback } from "@/components/feedback/operation-feedback"
 import { Button } from "@/components/ui/button"
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -29,6 +30,7 @@ const PartnerActions = ({ partner }: { partner: Partner }) => {
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 	const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false)
 	const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+	const [deleteOpen, setDeleteOpen] = useState(false)
 	const [isDeletePending, startDeleteTransition] = useTransition()
 	const { execute } = useOperationFeedback()
 
@@ -121,12 +123,20 @@ const PartnerActions = ({ partner }: { partner: Partner }) => {
 					)}
 
 					<DropdownMenuSeparator />
-					<DropdownMenuItem onSelect={handleDelete} className="text-destructive focus:text-destructive">
+					<DropdownMenuItem onSelect={() => setDeleteOpen(true)} className="text-destructive focus:text-destructive">
 						<Trash2 className="mr-2 h-4 w-4" /> Deletar
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
 
+			<ConfirmDeleteDialog
+				open={deleteOpen}
+				onOpenChange={setDeleteOpen}
+				onConfirm={handleDelete}
+				title="Excluir Parceiro"
+				description="Tem certeza que deseja excluir este parceiro?"
+				loading={isDeletePending}
+			/>
 			<EditPartnerDialog partner={partner} open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} />
 			<ApprovePartnerDialog partner={partner} open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen} />
 

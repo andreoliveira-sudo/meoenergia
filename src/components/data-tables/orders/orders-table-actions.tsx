@@ -9,6 +9,7 @@ import { hasPermission } from "@/actions/auth"
 import { deleteOrder, generateOrderPdf, listOrderFiles } from "@/actions/orders"
 import { downloadSimulationFiles } from "@/actions/simulations"
 import { useOperationFeedback } from "@/components/feedback/operation-feedback"
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
 import { EditOrderDialog } from "@/components/dialogs/edit-order-dialog"
 import { EditRatesDialog } from "@/components/dialogs/edit-rates-dialog"
 import { UpdateOrderStatusDialog } from "@/components/dialogs/update-order-status-dialog"
@@ -53,6 +54,7 @@ export const OrdersTableActions = ({ order }: { order: OrderWithRelations }) => 
 	const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false)
 	const [isManageRatesDialogOpen, setIsManageRatesDialogOpen] = useState(false)
 	const [isViewSheetOpen, setIsViewSheetOpen] = useState(false)
+	const [deleteOpen, setDeleteOpen] = useState(false)
 	const [isDeletePending, startDeleteTransition] = useTransition()
 	const [isPdfPending, startPdfTransition] = useTransition()
 	const [isDownloadPending, startDownloadTransition] = useTransition()
@@ -315,7 +317,7 @@ export const OrdersTableActions = ({ order }: { order: OrderWithRelations }) => 
 
 				<Tooltip>
 					<TooltipTrigger asChild>
-						<Button className="delete-button" variant="ghost" size="icon" onClick={handleDelete} disabled={isDeletePending}>
+						<Button className="delete-button" variant="ghost" size="icon" onClick={() => setDeleteOpen(true)} disabled={isDeletePending}>
 							{isDeletePending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
 							<span className="sr-only">Deletar</span>
 						</Button>
@@ -324,6 +326,14 @@ export const OrdersTableActions = ({ order }: { order: OrderWithRelations }) => 
 				</Tooltip>
 			</div>
 
+			<ConfirmDeleteDialog
+				open={deleteOpen}
+				onOpenChange={setDeleteOpen}
+				onConfirm={handleDelete}
+				title="Excluir Pedido"
+				description="Tem certeza que deseja excluir este pedido?"
+				loading={isDeletePending}
+			/>
 			<EditRatesDialog orderId={order.id} open={isManageRatesDialogOpen} onOpenChange={setIsManageRatesDialogOpen} />
 			<EditOrderDialog orderId={order.id} open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} />
 			<UpdateOrderStatusDialog order={order} open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen} />
