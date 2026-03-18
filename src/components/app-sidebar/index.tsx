@@ -40,7 +40,7 @@ const AppSidebar = async () => {
 			<AppSidebarContent userPermissions={[...userPermissions]} userType={userType} />
 			<SidebarFooter>
 				<div className="h-px bg-gradient-to-r from-transparent via-meo-blue/20 to-transparent mb-1" />
-				<div className="px-3 py-1 text-[10px] text-muted-foreground/60 font-mono text-center">
+				<div className="px-3 py-1 text-[10px] text-white/90 font-mono text-center">
 					Versão 180301-1407
 				</div>
 				<NavUser
