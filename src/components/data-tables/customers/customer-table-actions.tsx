@@ -64,6 +64,11 @@ export const CustomerTableActions = ({ customer }: { customer: CustomerWithRelat
 				onConfirm={handleDelete}
 				title="Excluir Cliente"
 				description="Tem certeza que deseja excluir este cliente?"
+				details={[
+					{ label: "Nome", value: customer.company_name },
+					{ label: "CNPJ", value: customer.cnpj },
+					{ label: "Tipo", value: customer.type === "pj" ? "Pessoa Jurídica" : "Pessoa Física" },
+				]}
 				loading={isDeletePending}
 			/>
 		</>

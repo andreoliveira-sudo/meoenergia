@@ -59,6 +59,9 @@ export const StructureTypesTableActions = ({ structureType }: { structureType: S
 				onConfirm={handleDelete}
 				title="Excluir Tipo de Estrutura"
 				description="Tem certeza que deseja excluir este tipo de estrutura?"
+				details={[
+					{ label: "Nome", value: structureType.name },
+				]}
 				loading={isDeletePending}
 			/>
 		</>

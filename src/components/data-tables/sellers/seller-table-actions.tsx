@@ -154,6 +154,10 @@ const SellerActions = ({ seller }: { seller: Seller }) => {
 				onConfirm={handleDelete}
 				title="Excluir Vendedor"
 				description="Tem certeza que deseja excluir este vendedor?"
+				details={[
+					{ label: "Nome", value: seller.name },
+					{ label: "Email", value: seller.email },
+				]}
 				loading={isDeletePending}
 			/>
 		</>

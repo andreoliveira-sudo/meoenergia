@@ -366,6 +366,10 @@ export const SimulationsTableActions = ({ simulation }: { simulation: Simulation
 				onConfirm={handleDelete}
 				title="Excluir Simulação"
 				description="Tem certeza que deseja excluir esta simulação?"
+				details={[
+					{ label: "Empresa", value: simulation.company_name },
+					{ label: "Status", value: simulation.status },
+				]}
 				loading={isDeletePending}
 			/>
 			<EditSimulationRatesDialog simulationId={simulation.id} open={isManageRatesDialogOpen} onOpenChange={setIsManageRatesDialogOpen} />

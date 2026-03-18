@@ -59,6 +59,10 @@ export const EquipmentsTableActions = ({ equipment }: { equipment: EquipmentWith
 				onConfirm={handleDelete}
 				title="Excluir Equipamento"
 				description="Tem certeza que deseja excluir este equipamento?"
+				details={[
+					{ label: "Equipamento", value: equipment.name },
+					{ label: "Marca", value: equipment.equipment_brands?.name },
+				]}
 				loading={isDeletePending}
 			/>
 		</>

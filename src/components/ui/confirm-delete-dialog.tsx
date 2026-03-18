@@ -12,12 +12,18 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 
+interface DetailItem {
+	label: string
+	value: string | number | null | undefined
+}
+
 interface ConfirmDeleteDialogProps {
 	open: boolean
 	onOpenChange: (open: boolean) => void
 	onConfirm: () => void
 	title?: string
 	description?: string
+	details?: DetailItem[]
 	loading?: boolean
 }
 
@@ -27,6 +33,7 @@ export function ConfirmDeleteDialog({
 	onConfirm,
 	title = "Confirmar Exclusão",
 	description = "Tem certeza que deseja excluir este registro?",
+	details,
 	loading = false,
 }: ConfirmDeleteDialogProps) {
 	return (
@@ -43,6 +50,16 @@ export function ConfirmDeleteDialog({
 						{description}
 					</AlertDialogDescription>
 				</AlertDialogHeader>
+				{details && details.length > 0 && (
+					<div className="rounded-md border bg-muted/50 px-4 py-3 text-sm space-y-1.5">
+						{details.filter(d => d.value != null && d.value !== "").map((d, i) => (
+							<div key={i} className="flex justify-between gap-4">
+								<span className="text-muted-foreground font-medium">{d.label}</span>
+								<span className="text-right font-semibold truncate max-w-[260px]">{d.value}</span>
+							</div>
+						))}
+					</div>
+				)}
 				<AlertDialogFooter>
 					<AlertDialogCancel disabled={loading}>Cancelar</AlertDialogCancel>
 					<Button

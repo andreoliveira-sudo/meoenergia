@@ -135,6 +135,11 @@ const PartnerActions = ({ partner }: { partner: Partner }) => {
 				onConfirm={handleDelete}
 				title="Excluir Parceiro"
 				description="Tem certeza que deseja excluir este parceiro?"
+				details={[
+					{ label: "Razão Social", value: partner.legal_business_name },
+					{ label: "CNPJ", value: partner.cnpj },
+					{ label: "Contato", value: partner.contact_name },
+				]}
 				loading={isDeletePending}
 			/>
 			<EditPartnerDialog partner={partner} open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} />

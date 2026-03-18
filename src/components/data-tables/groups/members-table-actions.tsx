@@ -47,6 +47,10 @@ export const MembersTableActions = ({ member }: MembersTableActionsProps) => {
 				onConfirm={() => mutation.mutate()}
 				title="Remover Membro"
 				description="Tem certeza que deseja remover este membro do grupo?"
+				details={[
+					{ label: "Nome", value: member.name },
+					{ label: "Email", value: member.email },
+				]}
 				loading={mutation.isPending}
 			/>
 		</>

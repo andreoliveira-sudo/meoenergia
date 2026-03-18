@@ -332,6 +332,11 @@ export const OrdersTableActions = ({ order }: { order: OrderWithRelations }) => 
 				onConfirm={handleDelete}
 				title="Excluir Pedido"
 				description="Tem certeza que deseja excluir este pedido?"
+				details={[
+					{ label: "KDI", value: order.kdi },
+					{ label: "Cliente", value: order.customer_name },
+					{ label: "Status", value: order.status },
+				]}
 				loading={isDeletePending}
 			/>
 			<EditRatesDialog orderId={order.id} open={isManageRatesDialogOpen} onOpenChange={setIsManageRatesDialogOpen} />

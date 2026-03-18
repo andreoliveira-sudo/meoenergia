@@ -47,6 +47,10 @@ export const RulesTableActions = ({ rule }: RulesTableActionsProps) => {
 				onConfirm={() => mutation.mutate()}
 				title="Excluir Regra"
 				description="Tem certeza que deseja excluir esta regra?"
+				details={[
+					{ label: "Tipo", value: rule.rule_type },
+					{ label: "Parceiro", value: rule.partnerName },
+				]}
 				loading={mutation.isPending}
 			/>
 		</>

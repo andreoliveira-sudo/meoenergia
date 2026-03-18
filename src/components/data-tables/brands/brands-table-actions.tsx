@@ -60,6 +60,9 @@ export const BrandsTableActions = ({ brand }: { brand: EquipmentBrand }) => {
 				onConfirm={handleDelete}
 				title="Excluir Marca"
 				description="Tem certeza que deseja excluir esta marca?"
+				details={[
+					{ label: "Marca", value: brand.name },
+				]}
 				loading={isDeletePending}
 			/>
 		</>
