@@ -41,6 +41,7 @@ export function mapOrderToRelation(order: any): OrderWithRelations | null {
 		system_power: order.system_power,
 		total_value,
 		status: order.status,
+		order_status: order.order_status || null,
 		created_at: order.created_at,
 		created_by_user: creator?.name || "N/A",
 		notes: order.notes

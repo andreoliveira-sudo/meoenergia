@@ -3,6 +3,7 @@ import type { Database } from "@/lib/definitions/supabase"
 export type Order = Database["public"]["Tables"]["orders"]["Row"]
 export type OrderInsert = Database["public"]["Tables"]["orders"]["Insert"]
 export type OrderStatus = Database["public"]["Enums"]["enum_order_status"]
+export type OrderWorkflowStatus = Database["public"]["Enums"]["enum_order_workflow_status"]
 
 export type OrderWithRelations = {
 	id: string
@@ -19,6 +20,7 @@ export type OrderWithRelations = {
 	system_power: number
 	total_value: number
 	status: OrderStatus
+	order_status: OrderWorkflowStatus | null
 	created_at: string
 	created_by_user: string
 	notes: string | null

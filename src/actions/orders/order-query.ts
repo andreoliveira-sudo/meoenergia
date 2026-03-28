@@ -11,6 +11,7 @@ export const ORDER_SELECT_QUERY = `
 	other_costs,
 	created_at,
 	status,
+	order_status,
 	notes,
 	service_fee_60,
 	customer_id,

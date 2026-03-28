@@ -105,6 +105,7 @@ export default async function createQuickOrderPF(data: QuickOrderPFSchema): Prom
 				customer_id: customerId!,
 				created_by_user_id: user.id,
 				status: 'analysis_pending',
+				order_status: 'in_review' as any,
 				current_consumption,
 				monthly_bill_value,
 				financing_term,

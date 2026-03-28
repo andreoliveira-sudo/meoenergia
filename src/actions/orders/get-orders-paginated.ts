@@ -1,7 +1,7 @@
 "use server"
 
 import { getCurrentUser } from "@/actions/auth"
-import type { OrderStatus, OrderWithRelations } from "@/lib/definitions/orders"
+import type { OrderStatus, OrderWorkflowStatus, OrderWithRelations } from "@/lib/definitions/orders"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { mapOrderToRelation } from "./map-order-to-relation"
 import { ORDER_SELECT_QUERY } from "./order-query"
@@ -10,6 +10,7 @@ export interface OrdersFilter {
 	search?: string
 	type?: "pf" | "pj"
 	status?: OrderStatus[]
+	orderStatus?: OrderWorkflowStatus[]
 	state?: string[]
 	city?: string[]
 	partnerName?: string[]
@@ -103,6 +104,9 @@ export async function getOrdersPaginated(
 			// Aplicar filtros que podem ser feitos no Supabase (performance)
 			if (filters.status && filters.status.length > 0) {
 				query = query.in("status", filters.status)
+			}
+			if (filters.orderStatus && filters.orderStatus.length > 0) {
+				query = query.in("order_status", filters.orderStatus)
 			}
 			if (filters.dateFrom) {
 				query = query.gte("created_at", `${filters.dateFrom}T00:00:00-03:00`)

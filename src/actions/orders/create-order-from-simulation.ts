@@ -48,6 +48,7 @@ async function createOrderFromSimulation(simulationId: string): Promise<ActionRe
 			other_costs: simulation.other_costs ?? 0,
 			seller_id: simulation.seller_id,
 			status: "analysis_pending",
+			order_status: "in_review" as any,
 			structure_type: simulation.structure_type ?? "",
 			system_power: simulation.system_power ?? 0,
 			notes: simulation.notes,

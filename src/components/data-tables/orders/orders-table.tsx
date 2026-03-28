@@ -46,6 +46,7 @@ export const OrdersTable = ({
 	// Filtros server-side
 	const [searchFilter, setSearchFilter] = useState("")
 	const [statusFilter, setStatusFilter] = useState<string[]>(filterStatus ? [filterStatus] : [])
+	const [orderStatusFilter, setOrderStatusFilter] = useState<string[]>([])
 	const [stateFilter, setStateFilter] = useState<string[]>([])
 	const [cityFilter, setCityFilter] = useState<string[]>([])
 	const [partnerFilter, setPartnerFilter] = useState<string[]>([])
@@ -91,7 +92,7 @@ export const OrdersTable = ({
 	// Resetar página ao mudar filtros
 	useEffect(() => {
 		setPagination((prev) => ({ ...prev, pageIndex: 0 }))
-	}, [debouncedSearch, statusFilter, stateFilter, cityFilter, partnerFilter, managerFilter, creatorFilter, dateFromFilter, dateToFilter, filterType])
+	}, [debouncedSearch, statusFilter, orderStatusFilter, stateFilter, cityFilter, partnerFilter, managerFilter, creatorFilter, dateFromFilter, dateToFilter, filterType])
 
 	// Montar objeto de filtros para o server
 	const serverFilters: OrdersFilter = useMemo(
@@ -99,6 +100,7 @@ export const OrdersTable = ({
 			search: debouncedSearch || undefined,
 			type: filterType,
 			status: statusFilter.length > 0 ? statusFilter as any : undefined,
+			orderStatus: orderStatusFilter.length > 0 ? orderStatusFilter as any : undefined,
 			state: stateFilter.length > 0 ? stateFilter : undefined,
 			city: cityFilter.length > 0 ? cityFilter : undefined,
 			partnerName: partnerFilter.length > 0 ? partnerFilter : undefined,
@@ -107,7 +109,7 @@ export const OrdersTable = ({
 			dateFrom: dateFromFilter || undefined,
 			dateTo: dateToFilter || undefined
 		}),
-		[debouncedSearch, filterType, statusFilter, stateFilter, cityFilter, partnerFilter, managerFilter, creatorFilter, dateFromFilter, dateToFilter]
+		[debouncedSearch, filterType, statusFilter, orderStatusFilter, stateFilter, cityFilter, partnerFilter, managerFilter, creatorFilter, dateFromFilter, dateToFilter]
 	)
 
 	// Sorting para o server
@@ -160,7 +162,8 @@ export const OrdersTable = ({
 		internal_manager: "Gestor Interno",
 		system_power: "Potência (kWp)",
 		total_value: "Valor",
-		status: "Status",
+		status: "St. Crédito",
+		order_status: "St. Pedido",
 		created_by_user: "Criado por",
 		created_at: "Data",
 		actions: "Ações"
@@ -170,6 +173,7 @@ export const OrdersTable = ({
 	const handleClearFilters = useCallback(() => {
 		setSearchFilter("")
 		setStatusFilter([])
+		setOrderStatusFilter([])
 		setStateFilter([])
 		setCityFilter([])
 		setPartnerFilter([])
@@ -182,6 +186,7 @@ export const OrdersTable = ({
 	const hasActiveFilters = !!(
 		searchFilter ||
 		statusFilter.length > 0 ||
+		orderStatusFilter.length > 0 ||
 		stateFilter.length > 0 ||
 		cityFilter.length > 0 ||
 		partnerFilter.length > 0 ||
@@ -198,6 +203,8 @@ export const OrdersTable = ({
 				onSearchChange={setSearchFilter}
 				statusFilter={statusFilter}
 				onStatusChange={setStatusFilter}
+				orderStatusFilter={orderStatusFilter}
+				onOrderStatusChange={setOrderStatusFilter}
 				stateFilter={stateFilter}
 				onStateChange={setStateFilter}
 				cityFilter={cityFilter}

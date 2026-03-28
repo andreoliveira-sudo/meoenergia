@@ -7,19 +7,28 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ServerFacetedFilter } from "@/components/ui/server-faceted-filter"
 
-const statusOptions = [
+const creditStatusOptions = [
 	{ label: "Ag. Análise", value: "analysis_pending" },
 	{ label: "Aprovado", value: "analysis_approved" },
 	{ label: "Reprovado", value: "analysis_rejected" },
+]
+
+const orderStatusOptions = [
+	{ label: "Em revisão", value: "in_review" },
+	{ label: "Reprovado", value: "rejected" },
 	{ label: "Ag. Documentos", value: "documents_pending" },
-	{ label: "Análise Docs", value: "docs_analysis" },
-	{ label: "Envio NF Distribuidora", value: "sending_distributor_invoice" },
-	{ label: "Pgto. Distribuidora", value: "payment_distributor" },
-	{ label: "Parecer de Acesso", value: "access_opinion" },
-	{ label: "Pagt inicial Integrador", value: "initial_payment_integrator" },
-	{ label: "Pagt Final Integrador", value: "final_payment_integrator" },
-	{ label: "Finalizado", value: "finished" },
-	{ label: "Cancelado", value: "canceled" }
+	{ label: "Analisando Docs", value: "docs_analysis" },
+	{ label: "Pendência documentos", value: "documents_issue" },
+	{ label: "Aguardando assinatura", value: "awaiting_signature" },
+	{ label: "Aguardando docs distribuidor", value: "awaiting_distributor_docs" },
+	{ label: "Analisando docs distribuidor", value: "analyzing_distributor_docs" },
+	{ label: "Pendência docs distribuidor", value: "distributor_docs_issue" },
+	{ label: "Equipamentos em Separação", value: "equipment_separation" },
+	{ label: "Equipamentos em Trânsito", value: "equipment_transit" },
+	{ label: "Equipamento entregue", value: "equipment_delivered" },
+	{ label: "Aguardando docs integrador", value: "awaiting_integrator_docs" },
+	{ label: "Analisando docs integrador", value: "analyzing_integrator_docs" },
+	{ label: "Pendência docs integrador", value: "integrator_docs_issue" },
 ]
 
 interface OrdersTableToolbarProps {
@@ -27,6 +36,8 @@ interface OrdersTableToolbarProps {
 	onSearchChange: (value: string) => void
 	statusFilter: string[]
 	onStatusChange: (values: string[]) => void
+	orderStatusFilter: string[]
+	onOrderStatusChange: (values: string[]) => void
 	stateFilter: string[]
 	onStateChange: (values: string[]) => void
 	cityFilter: string[]
@@ -57,6 +68,8 @@ export const OrdersTableToolbar = ({
 	onSearchChange,
 	statusFilter,
 	onStatusChange,
+	orderStatusFilter,
+	onOrderStatusChange,
 	stateFilter,
 	onStateChange,
 	cityFilter,
@@ -103,8 +116,11 @@ export const OrdersTableToolbar = ({
 				{/* Gestor Interno */}
 				<ServerFacetedFilter title="Gestor Interno" selectedValues={managerFilter} onChange={onManagerChange} options={managerOptions} />
 
-				{/* Status */}
-				<ServerFacetedFilter title="Status" selectedValues={statusFilter} onChange={onStatusChange} options={statusOptions} />
+				{/* Status Crédito */}
+				<ServerFacetedFilter title="St. Crédito" selectedValues={statusFilter} onChange={onStatusChange} options={creditStatusOptions} />
+
+				{/* Status Pedido */}
+				<ServerFacetedFilter title="St. Pedido" selectedValues={orderStatusFilter} onChange={onOrderStatusChange} options={orderStatusOptions} />
 
 				{/* Criado por */}
 				<ServerFacetedFilter title="Criado por" selectedValues={creatorFilter} onChange={onCreatorChange} options={creatorOptions} />

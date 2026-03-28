@@ -618,6 +618,7 @@ export type Database = {
           service_fee_48: number
           service_fee_60: number
           status: Database["public"]["Enums"]["enum_order_status"]
+          order_status: Database["public"]["Enums"]["enum_order_workflow_status"] | null
           structure_type: string
           financing_term: number
           monthly_bill_value: number
@@ -655,6 +656,7 @@ export type Database = {
           service_fee_48: number
           service_fee_60: number
           status?: Database["public"]["Enums"]["enum_order_status"]
+          order_status?: Database["public"]["Enums"]["enum_order_workflow_status"] | null
           structure_type: string
           system_power: number
           updated_at?: string
@@ -689,6 +691,7 @@ export type Database = {
           service_fee_48?: number
           service_fee_60?: number
           status?: Database["public"]["Enums"]["enum_order_status"]
+          order_status?: Database["public"]["Enums"]["enum_order_workflow_status"] | null
           structure_type?: string
           system_power?: number
           updated_at?: string
@@ -1417,6 +1420,22 @@ export type Database = {
       | "final_payment_integrator"
       | "finished"
       | "canceled"
+      enum_order_workflow_status:
+      | "in_review"
+      | "rejected"
+      | "documents_pending"
+      | "docs_analysis"
+      | "documents_issue"
+      | "awaiting_signature"
+      | "awaiting_distributor_docs"
+      | "analyzing_distributor_docs"
+      | "distributor_docs_issue"
+      | "equipment_separation"
+      | "equipment_transit"
+      | "equipment_delivered"
+      | "awaiting_integrator_docs"
+      | "analyzing_integrator_docs"
+      | "integrator_docs_issue"
       enum_partners_status: "pending" | "approved" | "rejected"
       enum_simulation_status:
       | "initial_contact"

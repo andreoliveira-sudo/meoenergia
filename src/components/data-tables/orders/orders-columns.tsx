@@ -6,7 +6,7 @@ import { ArrowUpDown } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import type { OrderStatus, OrderWithRelations } from "@/lib/definitions/orders"
+import type { OrderStatus, OrderWorkflowStatus, OrderWithRelations } from "@/lib/definitions/orders"
 import { formatCnpj, formatCpf } from "@/lib/formatters"
 import { cn, formatDate, getFirstAndLastName } from "@/lib/utils"
 import { OrdersTableActions } from "./orders-table-actions"
@@ -62,6 +62,43 @@ const statusColor: Record<OrderStatus, string> = {
 	final_payment_integrator: "bg-blue-45 text-blue-75 border-blue-45",
 	finished: "bg-green-65 text-white border-green-65",
 	canceled: "bg-red-500 hover:bg-red-600"
+}
+
+// ─── Status do Pedido (workflow) ───
+const orderStatusTranslations: Record<string, string> = {
+	in_review: "Em revisão",
+	rejected: "Reprovado",
+	documents_pending: "Ag. Documentos",
+	docs_analysis: "Analisando Docs",
+	documents_issue: "Pendência documentos",
+	awaiting_signature: "Aguardando assinatura",
+	awaiting_distributor_docs: "Aguardando docs distribuidor",
+	analyzing_distributor_docs: "Analisando docs distribuidor",
+	distributor_docs_issue: "Pendência docs distribuidor",
+	equipment_separation: "Equipamentos em Separação",
+	equipment_transit: "Equipamentos em Trânsito",
+	equipment_delivered: "Equipamento entregue",
+	awaiting_integrator_docs: "Aguardando docs integrador",
+	analyzing_integrator_docs: "Analisando docs integrador",
+	integrator_docs_issue: "Pendência docs integrador",
+}
+
+const orderStatusColor: Record<string, string> = {
+	in_review: "bg-slate-500/20 text-slate-700 border-slate-500/30",
+	rejected: "bg-red-500/20 text-red-700 border-red-500/30",
+	documents_pending: "bg-yellow-500/20 text-yellow-700 border-yellow-500/30",
+	docs_analysis: "bg-purple-500/20 text-purple-700 border-purple-500/30",
+	documents_issue: "bg-orange-500/20 text-orange-700 border-orange-500/30",
+	awaiting_signature: "bg-indigo-500/20 text-indigo-700 border-indigo-500/30",
+	awaiting_distributor_docs: "bg-amber-500/20 text-amber-700 border-amber-500/30",
+	analyzing_distributor_docs: "bg-purple-500/20 text-purple-700 border-purple-500/30",
+	distributor_docs_issue: "bg-orange-500/20 text-orange-700 border-orange-500/30",
+	equipment_separation: "bg-cyan-500/20 text-cyan-700 border-cyan-500/30",
+	equipment_transit: "bg-blue-500/20 text-blue-700 border-blue-500/30",
+	equipment_delivered: "bg-green-500/20 text-green-700 border-green-500/30",
+	awaiting_integrator_docs: "bg-amber-500/20 text-amber-700 border-amber-500/30",
+	analyzing_integrator_docs: "bg-purple-500/20 text-purple-700 border-purple-500/30",
+	integrator_docs_issue: "bg-orange-500/20 text-orange-700 border-orange-500/30",
 }
 
 export function createOrderColumns(filterType?: "pf" | "pj"): ColumnDef<OrderWithRelations>[] {
@@ -151,12 +188,28 @@ export function createOrderColumns(filterType?: "pf" | "pj"): ColumnDef<OrderWit
 		},
 		{
 			accessorKey: "status",
-			header: "Status",
+			header: "St. Crédito",
 			cell: ({ row }) => {
 				const status = row.getValue("status") as OrderStatus
 				return (
 					<Badge variant={statusVariant[status]} className={cn(statusColor[status])}>
 						{statusTranslations[status]}
+					</Badge>
+				)
+			},
+			filterFn: (row, id, value) => {
+				return value.includes(row.getValue(id))
+			}
+		},
+		{
+			accessorKey: "order_status",
+			header: "St. Pedido",
+			cell: ({ row }) => {
+				const orderStatus = row.getValue("order_status") as string | null
+				if (!orderStatus) return <span className="text-muted-foreground text-xs">-</span>
+				return (
+					<Badge variant="outline" className={cn("text-[10px] whitespace-nowrap", orderStatusColor[orderStatus] || "")}>
+						{orderStatusTranslations[orderStatus] || orderStatus}
 					</Badge>
 				)
 			},
