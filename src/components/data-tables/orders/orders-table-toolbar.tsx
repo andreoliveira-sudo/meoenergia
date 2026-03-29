@@ -15,7 +15,7 @@ const creditStatusOptions = [
 
 const orderStatusOptions = [
 	{ label: "Em revisão", value: "in_review" },
-	{ label: "Reprovado", value: "rejected" },
+	{ label: "Cancelado", value: "rejected" },
 	{ label: "Ag. Documentos", value: "documents_pending" },
 	{ label: "Analisando Docs", value: "docs_analysis" },
 	{ label: "Pendência documentos", value: "documents_issue" },

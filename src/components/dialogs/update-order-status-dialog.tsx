@@ -19,7 +19,7 @@ const creditStatuses: { value: OrderStatus; label: string }[] = [
 
 const workflowStatuses: { value: OrderWorkflowStatus; label: string }[] = [
 	{ value: "in_review", label: "Em revisão" },
-	{ value: "rejected", label: "Reprovado" },
+	{ value: "rejected", label: "Cancelado" },
 	{ value: "documents_pending", label: "Ag. Documentos" },
 	{ value: "docs_analysis", label: "Analisando Docs" },
 	{ value: "documents_issue", label: "Pendência documentos" },

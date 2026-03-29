@@ -67,7 +67,7 @@ const statusColor: Record<OrderStatus, string> = {
 // ─── Status do Pedido (workflow) ───
 const orderStatusTranslations: Record<string, string> = {
 	in_review: "Em revisão",
-	rejected: "Reprovado",
+	rejected: "Cancelado",
 	documents_pending: "Ag. Documentos",
 	docs_analysis: "Analisando Docs",
 	documents_issue: "Pendência documentos",
