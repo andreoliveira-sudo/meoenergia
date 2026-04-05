@@ -45,12 +45,14 @@ export const UpdateOrderStatusDialog = ({ order, open, onOpenChange }: UpdateOrd
 	const queryClient = useQueryClient()
 	const { execute } = useOperationFeedback()
 
-	const invalidateAll = () => {
-		queryClient.invalidateQueries({ queryKey: ["orders"] })
-		queryClient.invalidateQueries({ queryKey: ["orders-paginated"] })
-		queryClient.invalidateQueries({ queryKey: ["order-details", order.id] })
-		queryClient.invalidateQueries({ queryKey: ["order-history", order.id] })
-		queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] })
+	const invalidateAll = async () => {
+		await Promise.all([
+			queryClient.invalidateQueries({ queryKey: ["orders"] }),
+			queryClient.invalidateQueries({ queryKey: ["orders-paginated"] }),
+			queryClient.invalidateQueries({ queryKey: ["order-details", order.id] }),
+			queryClient.invalidateQueries({ queryKey: ["order-history", order.id] }),
+			queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] }),
+		])
 	}
 
 	const handleCreditStatusChange = (newStatus: OrderStatus) => {
@@ -63,8 +65,8 @@ export const UpdateOrderStatusDialog = ({ order, open, onOpenChange }: UpdateOrd
 			action: () => updateOrderStatus({ orderId: order.id, status: newStatus }),
 			loadingMessage: "Atualizando status de crédito...",
 			successMessage: (res) => res.message,
-			onSuccess: () => {
-				invalidateAll()
+			onSuccess: async () => {
+				await invalidateAll()
 				onOpenChange(false)
 			}
 		})
@@ -80,8 +82,8 @@ export const UpdateOrderStatusDialog = ({ order, open, onOpenChange }: UpdateOrd
 			action: () => updateOrderWorkflowStatus({ orderId: order.id, orderStatus: newStatus }),
 			loadingMessage: "Atualizando status do pedido...",
 			successMessage: (res) => res.message,
-			onSuccess: () => {
-				invalidateAll()
+			onSuccess: async () => {
+				await invalidateAll()
 				onOpenChange(false)
 			}
 		})
