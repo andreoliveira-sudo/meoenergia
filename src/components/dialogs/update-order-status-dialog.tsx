@@ -105,27 +105,21 @@ export const UpdateOrderStatusDialog = ({ order, open, onOpenChange }: UpdateOrd
 		if (!pendingAction) return
 		setConfirmOpen(false)
 
-		if (pendingAction.type === "credit") {
-			execute({
-				action: () => updateOrderStatus({ orderId: order.id, status: pendingAction.value as OrderStatus }),
-				loadingMessage: "Atualizando status de crédito...",
-				successMessage: (res) => res.message,
-				onSuccess: async () => {
-					await invalidateAll()
-					onOpenChange(false)
-				},
-			})
-		} else {
-			execute({
-				action: () => updateOrderWorkflowStatus({ orderId: order.id, orderStatus: pendingAction.value as OrderWorkflowStatus }),
-				loadingMessage: "Atualizando status do pedido...",
-				successMessage: (res) => res.message,
-				onSuccess: async () => {
-					await invalidateAll()
-					onOpenChange(false)
-				},
-			})
-		}
+		const action = pendingAction.type === "credit"
+			? () => updateOrderStatus({ orderId: order.id, status: pendingAction.value as OrderStatus })
+			: () => updateOrderWorkflowStatus({ orderId: order.id, orderStatus: pendingAction.value as OrderWorkflowStatus })
+
+		const label = pendingAction.type === "credit" ? "status de crédito" : "status do pedido"
+
+		execute({
+			action,
+			loadingMessage: `Atualizando ${label}...`,
+			successMessage: (res) => res.message,
+			onSuccess: () => {
+				onOpenChange(false)
+				invalidateAll()
+			},
+		})
 
 		setPendingAction(null)
 	}
