@@ -63,16 +63,16 @@ async function reviewDocument({
 			return { success: false, message: `Erro ao atualizar documento: ${updateError.message}` }
 		}
 
-		// 2. Se rejeitado, atualizar status do pedido para documents_issue
+		// 2. Se rejeitado, atualizar order_status para documents_issue + deadline +20 dias
 		if (status === "rejected") {
+			const deadline = new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString()
 			const { error: orderUpdateError } = await supabase
 				.from("orders")
-				.update({ status: "documents_issue" } as any)
+				.update({ order_status: "documents_issue", deadline } as any)
 				.eq("id", orderId)
 
 			if (orderUpdateError) {
-				console.error("Erro ao atualizar status do pedido:", orderUpdateError)
-				// Nao retorna erro - o documento foi atualizado com sucesso
+				console.error("Erro ao atualizar order_status do pedido:", orderUpdateError)
 			}
 		}
 

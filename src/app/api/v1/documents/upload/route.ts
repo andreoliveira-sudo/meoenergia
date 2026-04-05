@@ -71,6 +71,38 @@ export async function POST(request: NextRequest) {
 			.eq("order_id", orderId)
 			.eq("field_name", fieldName)
 
+		// Verificar se todos os obrigatorios foram enviados → transicao automatica
+		const { data: allDocs } = await (supabase as any)
+			.from("order_documents")
+			.select("field_name, required, status")
+			.eq("order_id", orderId)
+
+		if (allDocs) {
+			const requiredDocs = (allDocs as Array<{ field_name: string; required: boolean; status: string }>)
+				.filter((d) => d.required)
+			const allRequiredUploaded = requiredDocs.length > 0 &&
+				requiredDocs.every((d) => d.status === "uploaded" || d.status === "approved")
+
+			if (allRequiredUploaded) {
+				// Verificar order_status atual
+				const { data: orderRow } = await supabase
+					.from("orders")
+					.select("order_status")
+					.eq("id", orderId)
+					.single()
+
+				const currentOrderStatus = (orderRow as any)?.order_status
+				if (currentOrderStatus === "documents_pending" || currentOrderStatus === "documents_issue") {
+					// Transicao automatica → docs_analysis + deadline 24h
+					const deadline = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+					await supabase
+						.from("orders")
+						.update({ order_status: "docs_analysis", deadline } as any)
+						.eq("id", orderId)
+				}
+			}
+		}
+
 		return NextResponse.json({
 			success: true,
 			message: "Arquivo enviado com sucesso.",

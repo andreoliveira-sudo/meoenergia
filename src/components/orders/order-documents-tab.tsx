@@ -404,6 +404,25 @@ export function OrderDocumentsTab({ orderId, customerType, isAdmin = false, dead
 	const totalRequired = requiredDocs.length
 	const uploadedRequired = requiredDocs.filter((d) => d.hasFile).length
 	const allRequiredUploaded = uploadedRequired === totalRequired && totalRequired > 0
+	const [submitting, setSubmitting] = useState(false)
+
+	const handleSubmitForAnalysis = useCallback(async () => {
+		setSubmitting(true)
+		try {
+			const { updateOrderWorkflowStatus } = await import("@/actions/orders/update-order-workflow-status")
+			const result = await updateOrderWorkflowStatus({ orderId, orderStatus: "docs_analysis" })
+			if (result.success) {
+				toast.success("Documentos submetidos para analise!")
+				handleRefresh()
+			} else {
+				toast.error(result.message)
+			}
+		} catch {
+			toast.error("Erro ao submeter documentos.")
+		} finally {
+			setSubmitting(false)
+		}
+	}, [orderId, handleRefresh])
 
 	return (
 		<div className="space-y-4">
@@ -461,8 +480,14 @@ export function OrderDocumentsTab({ orderId, customerType, isAdmin = false, dead
 			{/* Submit button */}
 			{allRequiredUploaded && (
 				<div className="pt-2">
-					<Button className="w-full bg-green-600 hover:bg-green-700 text-white" size="sm">
-						Enviar dados
+					<Button
+						className="w-full bg-green-600 hover:bg-green-700 text-white"
+						size="sm"
+						disabled={submitting}
+						onClick={handleSubmitForAnalysis}
+					>
+						{submitting ? <Loader2 className="size-4 animate-spin mr-2" /> : null}
+						Submeter para analise
 					</Button>
 				</div>
 			)}
