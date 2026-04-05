@@ -6,13 +6,13 @@ import { toast } from "sonner"
 import {
 	CheckCircle,
 	Clock,
-	Download,
 	Eye,
 	FileUp,
 	Loader2,
+	Paperclip,
 	ShieldAlert,
-	Trash2,
 	Upload,
+	X,
 	XCircle,
 } from "lucide-react"
 
@@ -25,9 +25,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 
-const BUCKET_NAME = "docs_simulation"
 const ACCEPTED_TYPES = ["image/jpeg", "image/jpg", "image/png", "application/pdf"]
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024
 
 interface OrderDocumentsTabProps {
 	orderId: string
@@ -35,38 +34,18 @@ interface OrderDocumentsTabProps {
 	isAdmin?: boolean
 }
 
-function getStatusBadge(status: string) {
+function StatusBadge({ status }: { status: string }) {
 	switch (status) {
 		case "pending":
-			return (
-				<Badge className="bg-orange-100 text-orange-700 border-orange-200 hover:bg-orange-100">
-					<Clock className="size-3" />
-					Pendente
-				</Badge>
-			)
+			return <Badge className="bg-orange-500 text-white hover:bg-orange-500 border-0 text-[11px] px-3 py-1 w-full justify-center">Pendente</Badge>
 		case "uploaded":
-			return (
-				<Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100">
-					<FileUp className="size-3" />
-					Enviado
-				</Badge>
-			)
+			return <Badge className="bg-amber-500 text-white hover:bg-amber-500 border-0 text-[11px] px-3 py-1 w-full justify-center">Aguardando analise</Badge>
 		case "approved":
-			return (
-				<Badge className="bg-green-100 text-green-700 border-green-200 hover:bg-green-100">
-					<CheckCircle className="size-3" />
-					Aprovado
-				</Badge>
-			)
+			return <Badge className="bg-green-600 text-white hover:bg-green-600 border-0 text-[11px] px-3 py-1 w-full justify-center">Aprovado</Badge>
 		case "rejected":
-			return (
-				<Badge className="bg-red-100 text-red-700 border-red-200 hover:bg-red-100">
-					<XCircle className="size-3" />
-					Rejeitado
-				</Badge>
-			)
+			return <Badge className="bg-red-500 text-white hover:bg-red-500 border-0 text-[11px] px-3 py-1 w-full justify-center">Pendente</Badge>
 		default:
-			return <Badge variant="outline">{status}</Badge>
+			return <Badge variant="outline" className="text-[11px] px-3 py-1 w-full justify-center">{status}</Badge>
 	}
 }
 
@@ -81,17 +60,13 @@ function DocumentRow({
 	isAdmin: boolean
 	onRefresh: () => void
 }) {
-	const [selectedSubtype, setSelectedSubtype] = useState<string>(doc.doc_subtype || "")
+	const [selectedSubtype, setSelectedSubtype] = useState<string>(doc.doc_subtype || (doc.subtypes.length === 1 ? doc.subtypes[0] : ""))
 	const [uploading, setUploading] = useState(false)
 	const [deleting, setDeleting] = useState(false)
 	const [reviewing, setReviewing] = useState(false)
 	const [showRejectForm, setShowRejectForm] = useState(false)
 	const [rejectionReason, setRejectionReason] = useState("")
 	const fileInputRef = useRef<HTMLInputElement>(null)
-
-	const storageKey = selectedSubtype
-		? `${doc.field_name}_${selectedSubtype.replace(/\s+/g, "_")}`
-		: doc.field_name
 
 	const handleUpload = useCallback(async (file: File) => {
 		if (!ACCEPTED_TYPES.includes(file.type)) {
@@ -102,27 +77,28 @@ function DocumentRow({
 			toast.error("Arquivo muito grande. Maximo: 10MB.")
 			return
 		}
-		if (doc.subtypes.length > 0 && !selectedSubtype) {
+		if (doc.subtypes.length > 1 && !selectedSubtype) {
 			toast.error("Selecione o subtipo do documento antes de enviar.")
 			return
 		}
 
 		setUploading(true)
 		try {
+			const storageKey = selectedSubtype
+				? `${doc.field_name}_${selectedSubtype.replace(/\s+/g, "_")}`
+				: doc.field_name
+
 			const formData = new FormData()
 			formData.append("orderId", orderId)
 			formData.append("fieldName", doc.field_name)
 			formData.append("storageKey", storageKey)
 			formData.append("file", file)
-			if (selectedSubtype) {
-				formData.append("docSubtype", selectedSubtype)
-			}
+			if (selectedSubtype) formData.append("docSubtype", selectedSubtype)
 
 			const response = await fetch("/meo/api/v1/documents/upload", {
 				method: "POST",
 				body: formData,
 			})
-
 			const result = await response.json()
 
 			if (!response.ok || !result.success) {
@@ -130,31 +106,20 @@ function DocumentRow({
 				return
 			}
 
-			toast.success("Arquivo enviado com sucesso!")
+			toast.success("Arquivo enviado!")
 			onRefresh()
-		} catch (err) {
-			console.error("Erro no upload:", err)
+		} catch {
 			toast.error("Erro ao enviar arquivo.")
 		} finally {
 			setUploading(false)
-			if (fileInputRef.current) {
-				fileInputRef.current.value = ""
-			}
+			if (fileInputRef.current) fileInputRef.current.value = ""
 		}
-	}, [orderId, doc.field_name, doc.subtypes.length, selectedSubtype, storageKey, onRefresh])
-
-	const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-		const file = e.target.files?.[0]
-		if (file) {
-			handleUpload(file)
-		}
-	}, [handleUpload])
+	}, [orderId, doc.field_name, doc.subtypes, selectedSubtype, onRefresh])
 
 	const handleView = useCallback(async () => {
 		try {
 			const response = await fetch(`/meo/api/v1/documents/view?orderId=${orderId}&fieldName=${doc.field_name}`)
 			const result = await response.json()
-
 			if (result.success && result.url) {
 				window.open(result.url, "_blank")
 			} else {
@@ -168,23 +133,20 @@ function DocumentRow({
 	const handleDelete = useCallback(async () => {
 		setDeleting(true)
 		try {
-			const response = await fetch(`/meo/api/v1/documents/delete`, {
+			const response = await fetch("/meo/api/v1/documents/delete", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ orderId, fieldName: doc.field_name }),
 			})
-
 			const result = await response.json()
-
 			if (!response.ok || !result.success) {
-				toast.error(result.message || "Erro ao remover arquivo.")
+				toast.error(result.message || "Erro ao remover.")
 				return
 			}
-
 			toast.success("Arquivo removido.")
 			onRefresh()
 		} catch {
-			toast.error("Erro ao remover arquivo.")
+			toast.error("Erro ao remover.")
 		} finally {
 			setDeleting(false)
 		}
@@ -199,7 +161,6 @@ function DocumentRow({
 			toast.error("Informe o motivo da pendencia.")
 			return
 		}
-
 		setReviewing(true)
 		try {
 			const result = await reviewDocument({
@@ -208,7 +169,6 @@ function DocumentRow({
 				status,
 				rejectionReason: status === "rejected" ? rejectionReason.trim() : undefined,
 			})
-
 			if (result.success) {
 				toast.success(result.message)
 				setShowRejectForm(false)
@@ -225,158 +185,138 @@ function DocumentRow({
 	}, [orderId, doc.field_name, showRejectForm, rejectionReason, onRefresh])
 
 	return (
-		<div className="rounded-lg border p-3 space-y-2">
-			{/* Header: badge + label */}
-			<div className="flex items-start justify-between gap-2">
-				<div className="flex items-start gap-2 flex-1 min-w-0">
-					{getStatusBadge(doc.status)}
-					<div className="min-w-0">
-						<p className="text-sm font-medium leading-tight">
-							{doc.label}
-							{doc.required && <span className="text-destructive ml-1">*</span>}
-						</p>
-						{doc.doc_subtype && (
-							<p className="text-xs text-muted-foreground mt-0.5">
-								Subtipo: {doc.doc_subtype}
-							</p>
-						)}
-						{doc.deadline && (
-							<p className="text-xs text-muted-foreground mt-0.5">
-								Prazo: {new Date(doc.deadline).toLocaleDateString("pt-BR")}
-							</p>
-						)}
-					</div>
+		<div className="space-y-1">
+			{/* Main row: 3 columns */}
+			<div className="grid grid-cols-[180px_1fr_auto] items-center gap-3 py-2">
+				{/* Col 1: Label + Badge */}
+				<div className="space-y-1.5">
+					<p className="text-xs font-medium leading-tight">
+						{doc.label}
+						{doc.required ? <span className="text-destructive ml-0.5">*</span> : <span className="text-muted-foreground text-[10px] ml-1 italic">(Opcional)</span>}
+					</p>
+					<StatusBadge status={doc.status} />
+				</div>
+
+				{/* Col 2: Subtipo dropdown + formato */}
+				<div className="space-y-1">
+					{doc.subtypes.length > 1 ? (
+						<Select value={selectedSubtype} onValueChange={setSelectedSubtype} disabled={doc.status === "approved"}>
+							<SelectTrigger className="h-8 text-xs">
+								<SelectValue placeholder="Selecione..." />
+							</SelectTrigger>
+							<SelectContent>
+								{doc.subtypes.map((st) => (
+									<SelectItem key={st} value={st} className="text-xs">{st}</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					) : doc.subtypes.length === 1 ? (
+						<div className="h-8 flex items-center border rounded-md px-3">
+							<span className="text-xs text-muted-foreground">{doc.subtypes[0]}</span>
+						</div>
+					) : (
+						<div className="h-8" />
+					)}
+					<p className="text-[10px] text-muted-foreground">Formatos aceitos: .jpg, .jpeg, .png e .pdf</p>
+				</div>
+
+				{/* Col 3: Action button */}
+				<div className="flex items-center gap-1">
+					{doc.hasFile && doc.status !== "pending" ? (
+						<>
+							<Button
+								type="button"
+								size="sm"
+								variant="secondary"
+								className="h-8 text-xs gap-1.5"
+								onClick={handleView}
+							>
+								<Eye className="size-3.5" />
+								Visualizar
+							</Button>
+							{doc.status !== "approved" && (
+								<Button
+									type="button"
+									size="icon"
+									variant="ghost"
+									className="h-8 w-8 text-muted-foreground hover:text-destructive"
+									disabled={deleting}
+									onClick={handleDelete}
+								>
+									{deleting ? <Loader2 className="size-3.5 animate-spin" /> : <X className="size-3.5" />}
+								</Button>
+							)}
+						</>
+					) : (
+						<>
+							<input
+								ref={fileInputRef}
+								type="file"
+								accept=".jpg,.jpeg,.png,.pdf"
+								className="hidden"
+								onChange={(e) => {
+									const file = e.target.files?.[0]
+									if (file) handleUpload(file)
+								}}
+							/>
+							<Button
+								type="button"
+								size="sm"
+								className="h-8 text-xs gap-1.5 bg-blue-500 hover:bg-blue-600 text-white"
+								disabled={uploading}
+								onClick={() => fileInputRef.current?.click()}
+							>
+								{uploading ? <Loader2 className="size-3.5 animate-spin" /> : <Paperclip className="size-3.5" />}
+								Anexar arquivo
+							</Button>
+						</>
+					)}
 				</div>
 			</div>
 
-			{/* Rejection reason */}
+			{/* Rejection reason display */}
 			{doc.status === "rejected" && doc.rejection_reason && (
-				<div className="flex items-start gap-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md p-2">
-					<ShieldAlert className="size-4 text-red-500 mt-0.5 shrink-0" />
-					<p className="text-xs text-red-600 dark:text-red-400">{doc.rejection_reason}</p>
-				</div>
+				<p className="text-xs text-red-600 pl-1 pb-1">
+					Documento pendente, reenviar novo: {doc.rejection_reason}
+				</p>
 			)}
 
-			{/* Subtype selector */}
-			{doc.subtypes.length > 0 && doc.status !== "approved" && (
-				<Select value={selectedSubtype} onValueChange={setSelectedSubtype}>
-					<SelectTrigger className="h-8 text-xs">
-						<SelectValue placeholder="Selecione o subtipo..." />
-					</SelectTrigger>
-					<SelectContent>
-						{doc.subtypes.map((st) => (
-							<SelectItem key={st} value={st} className="text-xs">
-								{st}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-			)}
-
-			{/* Actions row */}
-			<div className="flex items-center gap-1.5 flex-wrap">
-				{/* Upload button */}
-				{doc.status !== "approved" && (
-					<>
-						<input
-							ref={fileInputRef}
-							type="file"
-							accept=".jpg,.jpeg,.png,.pdf"
-							className="hidden"
-							onChange={handleFileChange}
-						/>
-						<Button
-							type="button"
-							variant="outline"
-							size="sm"
-							className="h-7 text-xs gap-1"
-							disabled={uploading}
-							onClick={() => fileInputRef.current?.click()}
-						>
-							{uploading ? (
-								<Loader2 className="size-3 animate-spin" />
-							) : (
-								<Upload className="size-3" />
-							)}
-							{doc.hasFile ? "Substituir" : "Enviar"}
-						</Button>
-					</>
-				)}
-
-				{/* View button */}
-				{doc.hasFile && (
+			{/* Admin review buttons */}
+			{isAdmin && doc.hasFile && doc.status === "uploaded" && (
+				<div className="flex items-center gap-2 pl-1 pb-1">
 					<Button
 						type="button"
 						variant="outline"
 						size="sm"
-						className="h-7 text-xs gap-1"
-						onClick={handleView}
+						className="h-7 text-xs gap-1 border-green-300 text-green-700 hover:bg-green-50"
+						disabled={reviewing}
+						onClick={() => handleReview("approved")}
 					>
-						<Eye className="size-3" />
-						Visualizar
+						{reviewing ? <Loader2 className="size-3 animate-spin" /> : <CheckCircle className="size-3" />}
+						Aprovar
 					</Button>
-				)}
-
-				{/* Delete button */}
-				{doc.hasFile && doc.status !== "approved" && (
 					<Button
 						type="button"
-						variant="ghost"
+						variant="outline"
 						size="sm"
-						className="h-7 text-xs gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
-						disabled={deleting}
-						onClick={handleDelete}
+						className="h-7 text-xs gap-1 border-red-300 text-red-700 hover:bg-red-50"
+						disabled={reviewing}
+						onClick={() => handleReview("rejected")}
 					>
-						{deleting ? (
-							<Loader2 className="size-3 animate-spin" />
-						) : (
-							<Trash2 className="size-3" />
-						)}
+						<XCircle className="size-3" />
+						Pendencia
 					</Button>
-				)}
-
-				{/* Admin review buttons */}
-				{isAdmin && doc.hasFile && doc.status !== "approved" && (
-					<>
-						<Separator orientation="vertical" className="h-5 mx-1" />
-						<Button
-							type="button"
-							variant="outline"
-							size="sm"
-							className="h-7 text-xs gap-1 border-green-300 text-green-700 hover:bg-green-50"
-							disabled={reviewing}
-							onClick={() => handleReview("approved")}
-						>
-							{reviewing ? (
-								<Loader2 className="size-3 animate-spin" />
-							) : (
-								<CheckCircle className="size-3" />
-							)}
-							Aprovar
-						</Button>
-						<Button
-							type="button"
-							variant="outline"
-							size="sm"
-							className="h-7 text-xs gap-1 border-red-300 text-red-700 hover:bg-red-50"
-							disabled={reviewing}
-							onClick={() => handleReview("rejected")}
-						>
-							<XCircle className="size-3" />
-							Pendencia
-						</Button>
-					</>
-				)}
-			</div>
+				</div>
+			)}
 
 			{/* Rejection reason form */}
 			{showRejectForm && (
-				<div className="space-y-2 pt-1">
+				<div className="space-y-2 pl-1 pb-2">
 					<Textarea
 						placeholder="Motivo da pendencia..."
 						value={rejectionReason}
 						onChange={(e) => setRejectionReason(e.target.value)}
-						className="text-xs min-h-[60px]"
+						className="text-xs min-h-[50px]"
 					/>
 					<div className="flex gap-2">
 						<Button
@@ -388,23 +328,22 @@ function DocumentRow({
 							onClick={() => handleReview("rejected")}
 						>
 							{reviewing && <Loader2 className="size-3 animate-spin mr-1" />}
-							Confirmar pendencia
+							Confirmar
 						</Button>
 						<Button
 							type="button"
 							variant="ghost"
 							size="sm"
 							className="h-7 text-xs"
-							onClick={() => {
-								setShowRejectForm(false)
-								setRejectionReason("")
-							}}
+							onClick={() => { setShowRejectForm(false); setRejectionReason("") }}
 						>
 							Cancelar
 						</Button>
 					</div>
 				</div>
 			)}
+
+			<Separator />
 		</div>
 	)
 }
@@ -419,7 +358,7 @@ export function OrderDocumentsTab({ orderId, customerType, isAdmin = false }: Or
 	} = useQuery({
 		queryKey: ["order-documents", orderId, customerType],
 		queryFn: () => getOrderDocuments(orderId, customerType),
-		refetchInterval: 30000, // refresh every 30s
+		refetchInterval: 30000,
 	})
 
 	const documents = docsResponse?.success ? docsResponse.data : []
@@ -430,9 +369,9 @@ export function OrderDocumentsTab({ orderId, customerType, isAdmin = false }: Or
 
 	if (isLoading) {
 		return (
-			<div className="space-y-3 p-1">
+			<div className="space-y-3">
 				{Array.from({ length: 4 }).map((_, i) => (
-					<Skeleton key={i} className="h-24 w-full rounded-lg" />
+					<Skeleton key={i} className="h-16 w-full rounded-lg" />
 				))}
 			</div>
 		)
@@ -459,63 +398,51 @@ export function OrderDocumentsTab({ orderId, customerType, isAdmin = false }: Or
 		)
 	}
 
-	// Split into required and optional
 	const requiredDocs = documents.filter((d) => d.required)
 	const optionalDocs = documents.filter((d) => !d.required)
-
-	// Stats
 	const totalRequired = requiredDocs.length
 	const uploadedRequired = requiredDocs.filter((d) => d.hasFile).length
-	const approvedRequired = requiredDocs.filter((d) => d.status === "approved").length
+	const allRequiredUploaded = uploadedRequired === totalRequired && totalRequired > 0
 
 	return (
 		<div className="space-y-4">
-			{/* Progress summary */}
-			<div className="flex items-center gap-3 text-xs text-muted-foreground bg-muted/50 rounded-lg p-3">
+			{/* Header */}
+			<div className="text-center">
+				<h3 className="text-sm font-semibold">Anexe os documentos.</h3>
+			</div>
+
+			{/* Progress */}
+			<div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
 				<div className="flex items-center gap-1">
 					<Upload className="size-3.5" />
-					<span>Enviados: {uploadedRequired}/{totalRequired}</span>
+					Enviados: {uploadedRequired}/{totalRequired}
 				</div>
-				<Separator orientation="vertical" className="h-4" />
 				<div className="flex items-center gap-1">
 					<CheckCircle className="size-3.5 text-green-500" />
-					<span>Aprovados: {approvedRequired}/{totalRequired}</span>
+					Aprovados: {requiredDocs.filter((d) => d.status === "approved").length}/{totalRequired}
 				</div>
 			</div>
 
-			{/* Required documents */}
-			{requiredDocs.length > 0 && (
-				<div className="space-y-2">
-					<h4 className="text-sm font-semibold text-foreground">
-						Documentos obrigatorios
-					</h4>
-					{requiredDocs.map((doc) => (
-						<DocumentRow
-							key={doc.field_name}
-							doc={doc}
-							orderId={orderId}
-							isAdmin={isAdmin}
-							onRefresh={handleRefresh}
-						/>
+			{/* Required docs */}
+			{requiredDocs.map((doc) => (
+				<DocumentRow key={doc.field_name} doc={doc} orderId={orderId} isAdmin={isAdmin} onRefresh={handleRefresh} />
+			))}
+
+			{/* Optional docs */}
+			{optionalDocs.length > 0 && (
+				<>
+					{optionalDocs.map((doc) => (
+						<DocumentRow key={doc.field_name} doc={doc} orderId={orderId} isAdmin={isAdmin} onRefresh={handleRefresh} />
 					))}
-				</div>
+				</>
 			)}
 
-			{/* Optional documents */}
-			{optionalDocs.length > 0 && (
-				<div className="space-y-2">
-					<h4 className="text-sm font-semibold text-muted-foreground">
-						Documentos opcionais
-					</h4>
-					{optionalDocs.map((doc) => (
-						<DocumentRow
-							key={doc.field_name}
-							doc={doc}
-							orderId={orderId}
-							isAdmin={isAdmin}
-							onRefresh={handleRefresh}
-						/>
-					))}
+			{/* Submit button */}
+			{allRequiredUploaded && (
+				<div className="pt-2">
+					<Button className="w-full bg-green-600 hover:bg-green-700 text-white" size="sm">
+						Enviar dados
+					</Button>
 				</div>
 			)}
 		</div>
