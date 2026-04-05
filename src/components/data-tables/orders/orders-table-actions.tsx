@@ -219,18 +219,6 @@ export const OrdersTableActions = ({ order }: { order: OrderWithRelations }) => 
 					<TooltipContent>Editar Pedido</TooltipContent>
 				</Tooltip>
 
-				{canManageRates && (
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button variant="ghost" size="icon" onClick={() => setIsManageRatesDialogOpen(true)}>
-								<DollarSign className="h-4 w-4" />
-								<span className="sr-only">Alterar taxas</span>
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent>Alterar taxas</TooltipContent>
-					</Tooltip>
-				)}
-
 				{canManageStatus && (
 					<Tooltip>
 						<TooltipTrigger asChild>
