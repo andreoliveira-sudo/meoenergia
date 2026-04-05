@@ -12,6 +12,7 @@ export const ORDER_SELECT_QUERY = `
 	created_at,
 	status,
 	order_status,
+	deadline,
 	notes,
 	service_fee_60,
 	customer_id,

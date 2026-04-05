@@ -234,6 +234,7 @@ export function ViewOrderSheet({ orderId, open, onOpenChange, defaultTab = "deta
 								orderId={orderId}
 								customerType={(customer?.type as "pf" | "pj") || "pf"}
 								isAdmin={isAdmin}
+								deadline={(order as any)?.deadline || null}
 							/>
 						</TabsContent>
 

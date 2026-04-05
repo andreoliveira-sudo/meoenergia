@@ -222,6 +222,43 @@ export function createOrderColumns(filterType?: "pf" | "pj"): ColumnDef<OrderWit
 			}
 		},
 		{
+			accessorKey: "deadline",
+			header: "Prazo",
+			cell: ({ row }) => {
+				const deadline = row.original.deadline
+				if (!deadline) return <span className="text-muted-foreground text-xs">-</span>
+
+				const now = new Date()
+				const deadlineDate = new Date(deadline)
+				const diffMs = deadlineDate.getTime() - now.getTime()
+				const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+				const diffHours = Math.ceil(diffMs / (1000 * 60 * 60))
+
+				let label: string
+				let colorClass: string
+
+				if (diffMs <= 0) {
+					label = "Vencido"
+					colorClass = "bg-red-500 text-white"
+				} else if (diffHours <= 24) {
+					label = `${diffHours}h`
+					colorClass = "bg-red-500/20 text-red-700 border-red-500/30"
+				} else if (diffDays <= 5) {
+					label = `${diffDays} dias`
+					colorClass = "bg-yellow-500/20 text-yellow-700 border-yellow-500/30"
+				} else {
+					label = `${diffDays} dias`
+					colorClass = "bg-green-500/20 text-green-700 border-green-500/30"
+				}
+
+				return (
+					<Badge variant="outline" className={cn("text-[10px] whitespace-nowrap", colorClass)}>
+						{label}
+					</Badge>
+				)
+			}
+		},
+		{
 			accessorKey: "created_by_user",
 			header: "Criado por",
 			cell: ({ row }) => row.original.created_by_user || "-",

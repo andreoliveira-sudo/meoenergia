@@ -32,6 +32,7 @@ interface OrderDocumentsTabProps {
 	orderId: string
 	customerType: "pf" | "pj"
 	isAdmin?: boolean
+	deadline?: string | null
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -348,7 +349,7 @@ function DocumentRow({
 	)
 }
 
-export function OrderDocumentsTab({ orderId, customerType, isAdmin = false }: OrderDocumentsTabProps) {
+export function OrderDocumentsTab({ orderId, customerType, isAdmin = false, deadline }: OrderDocumentsTabProps) {
 	const queryClient = useQueryClient()
 
 	const {
@@ -406,9 +407,29 @@ export function OrderDocumentsTab({ orderId, customerType, isAdmin = false }: Or
 
 	return (
 		<div className="space-y-4">
-			{/* Header */}
-			<div className="text-center">
+			{/* Header + Prazo */}
+			<div className="text-center space-y-1">
 				<h3 className="text-sm font-semibold">Anexe os documentos.</h3>
+				{deadline && (() => {
+					const now = new Date()
+					const dl = new Date(deadline)
+					const diffMs = dl.getTime() - now.getTime()
+					const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+					const diffHours = Math.ceil(diffMs / (1000 * 60 * 60))
+					const isExpired = diffMs <= 0
+					const isUrgent = diffHours <= 24
+					const isWarning = diffDays <= 5
+					return (
+						<p className={`text-xs font-medium ${isExpired ? "text-red-600" : isUrgent ? "text-red-500" : isWarning ? "text-yellow-600" : "text-muted-foreground"}`}>
+							{isExpired
+								? `Prazo vencido em ${dl.toLocaleDateString("pt-BR")}`
+								: diffHours <= 24
+									? `Prazo: ${diffHours}h restantes`
+									: `Prazo: ${diffDays} dias restantes (${dl.toLocaleDateString("pt-BR")})`
+							}
+						</p>
+					)
+				})()}
 			</div>
 
 			{/* Progress */}

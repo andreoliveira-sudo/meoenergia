@@ -10,18 +10,41 @@ interface UpdateOrderWorkflowStatusParams {
 	orderStatus: OrderWorkflowStatus
 }
 
+/**
+ * Calcula deadline baseado no novo status do pedido.
+ * - documents_pending: 20 dias (parceiro enviar docs)
+ * - docs_analysis: 24h (admin analisar)
+ * - documents_issue: 20 dias (parceiro corrigir)
+ * - Outros: sem prazo (null)
+ */
+function calculateDeadline(status: OrderWorkflowStatus): string | null {
+	const now = new Date()
+	switch (status) {
+		case "documents_pending":
+		case "documents_issue":
+			// 20 dias
+			return new Date(now.getTime() + 20 * 24 * 60 * 60 * 1000).toISOString()
+		case "docs_analysis":
+			// 24 horas
+			return new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString()
+		default:
+			return null
+	}
+}
+
 export async function updateOrderWorkflowStatus({ orderId, orderStatus }: UpdateOrderWorkflowStatusParams) {
 	try {
 		const user = await getCurrentUser()
 		if (!user) {
-			return { success: false, message: "Usuário não autenticado" }
+			return { success: false, message: "Usuario nao autenticado" }
 		}
 
 		const supabase = createAdminClient()
+		const deadline = calculateDeadline(orderStatus)
 
 		const { error } = await supabase
 			.from("orders")
-			.update({ order_status: orderStatus } as any)
+			.update({ order_status: orderStatus, deadline } as any)
 			.eq("id", orderId)
 
 		if (error) {

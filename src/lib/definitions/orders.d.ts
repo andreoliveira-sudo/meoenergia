@@ -21,6 +21,7 @@ export type OrderWithRelations = {
 	total_value: number
 	status: OrderStatus
 	order_status: OrderWorkflowStatus | null
+	deadline: string | null
 	created_at: string
 	created_by_user: string
 	notes: string | null

@@ -164,6 +164,7 @@ export const OrdersTable = ({
 		total_value: "Valor",
 		status: "St. Crédito",
 		order_status: "St. Pedido",
+		deadline: "Prazo",
 		created_by_user: "Criado por",
 		created_at: "Data",
 		actions: "Ações"

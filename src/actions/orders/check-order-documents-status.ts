@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import { documentFields } from "@/lib/constants"
 import type { ActionResponse } from "@/types/action-response"
 import { listOrderFiles, updateOrderStatus } from "."
+import { updateOrderWorkflowStatus } from "./update-order-workflow-status"
 import { getOrderById } from "."
 
 export interface DocumentStatus {
@@ -45,18 +46,26 @@ async function checkOrderDocumentsStatus(orderId: string): Promise<ActionRespons
 
 		const allDocumentsUploaded = documentStatus.every((doc) => doc.uploaded)
 
-		// **REGRA ADICIONADA:**
-		// Só atualiza o status se todos os docs estiverem lá E o status atual for 'documents_pending'
-		if (allDocumentsUploaded && currentStatus === "documents_pending") {
-			const updateResponse = await updateOrderStatus({
-				orderId,
-				status: "docs_analysis"
-			})
+		// Quando todos docs enviados e order_status é documents_pending → muda para docs_analysis
+		// Também funciona quando order_status é documents_issue (parceiro reenviou após pendência)
+		if (allDocumentsUploaded) {
+			// Buscar order_status atual
+			const supabaseAdmin = (await import("@/lib/supabase/admin")).createAdminClient()
+			const { data: orderRow } = await supabaseAdmin
+				.from("orders")
+				.select("order_status")
+				.eq("id", orderId)
+				.single()
 
-			if (updateResponse.success) {
-				revalidatePath("/dashboard/orders")
-			} else {
-				console.error(`Falha ao atualizar status do pedido ${orderId}: ${updateResponse.message}`)
+			const currentOrderStatus = (orderRow as any)?.order_status
+			if (currentOrderStatus === "documents_pending" || currentOrderStatus === "documents_issue") {
+				const wfResult = await updateOrderWorkflowStatus({
+					orderId,
+					orderStatus: "docs_analysis"
+				})
+				if (wfResult.success) {
+					revalidatePath("/dashboard/orders")
+				}
 			}
 		}
 
