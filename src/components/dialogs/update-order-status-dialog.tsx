@@ -1,7 +1,7 @@
 "use client"
 
 import { useQueryClient } from "@tanstack/react-query"
-import { AlertTriangle, Check } from "lucide-react"
+import { AlertTriangle } from "lucide-react"
 import { useState } from "react"
 
 import { updateOrderStatus } from "@/actions/orders"
@@ -17,10 +17,12 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { OrderStatus, OrderWorkflowStatus, OrderWithRelations } from "@/lib/definitions/orders"
-import { cn } from "@/lib/utils"
 
 const creditStatuses: { value: OrderStatus; label: string }[] = [
 	{ value: "analysis_pending", label: "Ag. Análise" },
@@ -48,7 +50,6 @@ const workflowStatuses: { value: OrderWorkflowStatus; label: string }[] = [
 	{ value: "canceled", label: "Cancelado" },
 ]
 
-// Helper para buscar label por valor
 const getCreditLabel = (value: string) => creditStatuses.find((s) => s.value === value)?.label || value
 const getWorkflowLabel = (value: string) => workflowStatuses.find((s) => s.value === value)?.label || value
 
@@ -62,7 +63,8 @@ export const UpdateOrderStatusDialog = ({ order, open, onOpenChange }: UpdateOrd
 	const queryClient = useQueryClient()
 	const { execute } = useOperationFeedback()
 
-	// Estado para confirmação
+	const [selectedCredit, setSelectedCredit] = useState<string>("")
+	const [selectedWorkflow, setSelectedWorkflow] = useState<string>("")
 	const [confirmOpen, setConfirmOpen] = useState(false)
 	const [pendingAction, setPendingAction] = useState<{
 		type: "credit" | "workflow"
@@ -71,36 +73,33 @@ export const UpdateOrderStatusDialog = ({ order, open, onOpenChange }: UpdateOrd
 		currentLabel: string
 	} | null>(null)
 
-	const invalidateAll = async () => {
-		await Promise.all([
-			queryClient.invalidateQueries({ queryKey: ["orders"] }),
-			queryClient.invalidateQueries({ queryKey: ["orders-paginated"] }),
-			queryClient.invalidateQueries({ queryKey: ["order-details", order.id] }),
-			queryClient.invalidateQueries({ queryKey: ["order-history", order.id] }),
-			queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] }),
-		])
+	const invalidateAll = () => {
+		queryClient.invalidateQueries({ queryKey: ["orders"] })
+		queryClient.invalidateQueries({ queryKey: ["orders-paginated"] })
+		queryClient.invalidateQueries({ queryKey: ["order-details", order.id] })
+		queryClient.invalidateQueries({ queryKey: ["order-history", order.id] })
+		queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] })
 	}
 
-	const handleCreditClick = (newStatus: OrderStatus) => {
-		if (newStatus === order.status) return
-		setPendingAction({
-			type: "credit",
-			value: newStatus,
-			label: getCreditLabel(newStatus),
-			currentLabel: getCreditLabel(order.status),
-		})
-		setConfirmOpen(true)
-	}
-
-	const handleWorkflowClick = (newStatus: OrderWorkflowStatus) => {
-		if (newStatus === order.order_status) return
-		setPendingAction({
-			type: "workflow",
-			value: newStatus,
-			label: getWorkflowLabel(newStatus),
-			currentLabel: order.order_status ? getWorkflowLabel(order.order_status) : "Nenhum",
-		})
-		setConfirmOpen(true)
+	const handleConfirmClick = () => {
+		// Verificar qual select mudou
+		if (selectedCredit && selectedCredit !== order.status) {
+			setPendingAction({
+				type: "credit",
+				value: selectedCredit,
+				label: getCreditLabel(selectedCredit),
+				currentLabel: getCreditLabel(order.status),
+			})
+			setConfirmOpen(true)
+		} else if (selectedWorkflow && selectedWorkflow !== (order.order_status || "")) {
+			setPendingAction({
+				type: "workflow",
+				value: selectedWorkflow,
+				label: getWorkflowLabel(selectedWorkflow),
+				currentLabel: order.order_status ? getWorkflowLabel(order.order_status) : "Nenhum",
+			})
+			setConfirmOpen(true)
+		}
 	}
 
 	const handleConfirm = () => {
@@ -119,6 +118,8 @@ export const UpdateOrderStatusDialog = ({ order, open, onOpenChange }: UpdateOrd
 			successMessage: (res) => res.message,
 			onSuccess: () => {
 				onOpenChange(false)
+				setSelectedCredit("")
+				setSelectedWorkflow("")
 				invalidateAll()
 			},
 		})
@@ -126,54 +127,68 @@ export const UpdateOrderStatusDialog = ({ order, open, onOpenChange }: UpdateOrd
 		setPendingAction(null)
 	}
 
+	const hasChange = (selectedCredit && selectedCredit !== order.status) ||
+		(selectedWorkflow && selectedWorkflow !== (order.order_status || ""))
+
 	return (
 		<>
-			<Dialog open={open} onOpenChange={onOpenChange}>
-				<DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+			<Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) { setSelectedCredit(""); setSelectedWorkflow(""); } }}>
+				<DialogContent className="max-w-md">
 					<DialogHeader>
 						<DialogTitle>Alterar Status — Pedido #{order.kdi}</DialogTitle>
-						<DialogDescription>Selecione o status de crédito ou do pedido.</DialogDescription>
+						<DialogDescription>Selecione o novo status e confirme a alteração.</DialogDescription>
 					</DialogHeader>
 
-					{/* Seção: Status de Crédito */}
-					<div className="space-y-2">
-						<h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Status de Crédito</h4>
-						<div className="grid grid-cols-3 gap-2">
-							{creditStatuses.map((s) => (
-								<Button
-									key={s.value}
-									variant="outline"
-									size="sm"
-									className={cn("justify-start", order.status === s.value && "ring-2 ring-primary")}
-									onClick={() => handleCreditClick(s.value)}
-								>
-									<Check className={cn("mr-2 h-4 w-4", order.status === s.value ? "opacity-100" : "opacity-0")} />
-									{s.label}
-								</Button>
-							))}
+					<div className="space-y-5 py-2">
+						{/* Status de Crédito */}
+						<div className="space-y-2">
+							<div className="flex items-center justify-between">
+								<Label className="text-sm font-semibold">Status de Crédito</Label>
+								<Badge variant="outline" className="text-xs">{getCreditLabel(order.status)}</Badge>
+							</div>
+							<Select value={selectedCredit} onValueChange={(v) => { setSelectedCredit(v); setSelectedWorkflow(""); }}>
+								<SelectTrigger>
+									<SelectValue placeholder="Selecione o status de crédito" />
+								</SelectTrigger>
+								<SelectContent>
+									{creditStatuses.map((s) => (
+										<SelectItem key={s.value} value={s.value}>
+											{s.label} {s.value === order.status && "(atual)"}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+
+						<div className="h-px bg-border" />
+
+						{/* Status do Pedido */}
+						<div className="space-y-2">
+							<div className="flex items-center justify-between">
+								<Label className="text-sm font-semibold">Status do Pedido</Label>
+								<Badge variant="outline" className="text-xs">
+									{order.order_status ? getWorkflowLabel(order.order_status) : "Nenhum"}
+								</Badge>
+							</div>
+							<Select value={selectedWorkflow} onValueChange={(v) => { setSelectedWorkflow(v); setSelectedCredit(""); }}>
+								<SelectTrigger>
+									<SelectValue placeholder="Selecione o status do pedido" />
+								</SelectTrigger>
+								<SelectContent>
+									{workflowStatuses.map((s) => (
+										<SelectItem key={s.value} value={s.value}>
+											{s.label} {s.value === order.order_status && "(atual)"}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 						</div>
 					</div>
 
-					<div className="h-px bg-border my-2" />
-
-					{/* Seção: Status do Pedido */}
-					<div className="space-y-2">
-						<h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Status do Pedido</h4>
-						<div className="grid grid-cols-2 gap-2">
-							{workflowStatuses.map((s) => (
-								<Button
-									key={s.value}
-									variant="outline"
-									size="sm"
-									className={cn("justify-start text-xs", order.order_status === s.value && "ring-2 ring-primary")}
-									onClick={() => handleWorkflowClick(s.value)}
-								>
-									<Check className={cn("mr-2 h-3 w-3", order.order_status === s.value ? "opacity-100" : "opacity-0")} />
-									{s.label}
-								</Button>
-							))}
-						</div>
-					</div>
+					<DialogFooter>
+						<Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+						<Button onClick={handleConfirmClick} disabled={!hasChange}>Confirmar</Button>
+					</DialogFooter>
 				</DialogContent>
 			</Dialog>
 
@@ -183,12 +198,12 @@ export const UpdateOrderStatusDialog = ({ order, open, onOpenChange }: UpdateOrd
 					<AlertDialogHeader>
 						<AlertDialogTitle className="flex items-center gap-2">
 							<AlertTriangle className="h-5 w-5 text-amber-500" />
-							Confirmar Alteração de Status
+							Confirmar Alteração
 						</AlertDialogTitle>
 						<AlertDialogDescription asChild>
 							<div className="space-y-3 pt-2">
 								<p>
-									Deseja alterar o <strong>{pendingAction?.type === "credit" ? "status de crédito" : "status do pedido"}</strong> do pedido <strong>#{order.kdi}</strong>?
+									Alterar <strong>{pendingAction?.type === "credit" ? "status de crédito" : "status do pedido"}</strong> do pedido <strong>#{order.kdi}</strong>?
 								</p>
 								<div className="flex items-center gap-3 bg-muted/50 rounded-lg p-3">
 									<div className="text-center flex-1">
