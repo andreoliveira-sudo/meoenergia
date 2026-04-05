@@ -67,7 +67,7 @@ const statusColor: Record<OrderStatus, string> = {
 // ─── Status do Pedido (workflow) ───
 const orderStatusTranslations: Record<string, string> = {
 	in_review: "Em revisão",
-	rejected: "Cancelado",
+	rejected: "Reprovado",
 	documents_pending: "Ag. Documentos",
 	docs_analysis: "Analisando Docs",
 	documents_issue: "Pendência documentos",
@@ -81,6 +81,8 @@ const orderStatusTranslations: Record<string, string> = {
 	awaiting_integrator_docs: "Aguardando docs integrador",
 	analyzing_integrator_docs: "Analisando docs integrador",
 	integrator_docs_issue: "Pendência docs integrador",
+	finished: "Finalizado",
+	canceled: "Cancelado",
 }
 
 const orderStatusColor: Record<string, string> = {
@@ -99,6 +101,8 @@ const orderStatusColor: Record<string, string> = {
 	awaiting_integrator_docs: "bg-amber-500/20 text-amber-700 border-amber-500/30",
 	analyzing_integrator_docs: "bg-purple-500/20 text-purple-700 border-purple-500/30",
 	integrator_docs_issue: "bg-orange-500/20 text-orange-700 border-orange-500/30",
+	finished: "bg-green-600/20 text-green-700 border-green-600/30",
+	canceled: "bg-red-500/20 text-red-700 border-red-500/30",
 }
 
 export function createOrderColumns(filterType?: "pf" | "pj"): ColumnDef<OrderWithRelations>[] {

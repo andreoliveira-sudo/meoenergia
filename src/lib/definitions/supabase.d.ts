@@ -1436,6 +1436,8 @@ export type Database = {
       | "awaiting_integrator_docs"
       | "analyzing_integrator_docs"
       | "integrator_docs_issue"
+      | "finished"
+      | "canceled"
       enum_partners_status: "pending" | "approved" | "rejected"
       enum_simulation_status:
       | "initial_contact"

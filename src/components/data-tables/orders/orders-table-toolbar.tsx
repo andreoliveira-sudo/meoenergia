@@ -15,7 +15,7 @@ const creditStatusOptions = [
 
 const orderStatusOptions = [
 	{ label: "Em revisão", value: "in_review" },
-	{ label: "Cancelado", value: "rejected" },
+	{ label: "Reprovado", value: "rejected" },
 	{ label: "Ag. Documentos", value: "documents_pending" },
 	{ label: "Analisando Docs", value: "docs_analysis" },
 	{ label: "Pendência documentos", value: "documents_issue" },
@@ -29,6 +29,8 @@ const orderStatusOptions = [
 	{ label: "Aguardando docs integrador", value: "awaiting_integrator_docs" },
 	{ label: "Analisando docs integrador", value: "analyzing_integrator_docs" },
 	{ label: "Pendência docs integrador", value: "integrator_docs_issue" },
+	{ label: "Finalizado", value: "finished" },
+	{ label: "Cancelado", value: "canceled" },
 ]
 
 interface OrdersTableToolbarProps {

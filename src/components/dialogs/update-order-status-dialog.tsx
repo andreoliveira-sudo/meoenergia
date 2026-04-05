@@ -30,7 +30,7 @@ const creditStatuses: { value: OrderStatus; label: string }[] = [
 
 const workflowStatuses: { value: OrderWorkflowStatus; label: string }[] = [
 	{ value: "in_review", label: "Em revisão" },
-	{ value: "rejected", label: "Cancelado" },
+	{ value: "rejected", label: "Reprovado" },
 	{ value: "documents_pending", label: "Ag. Documentos" },
 	{ value: "docs_analysis", label: "Analisando Docs" },
 	{ value: "documents_issue", label: "Pendência documentos" },
@@ -44,6 +44,8 @@ const workflowStatuses: { value: OrderWorkflowStatus; label: string }[] = [
 	{ value: "awaiting_integrator_docs", label: "Aguardando docs integrador" },
 	{ value: "analyzing_integrator_docs", label: "Analisando docs integrador" },
 	{ value: "integrator_docs_issue", label: "Pendência docs integrador" },
+	{ value: "finished", label: "Finalizado" },
+	{ value: "canceled", label: "Cancelado" },
 ]
 
 // Helper para buscar label por valor
