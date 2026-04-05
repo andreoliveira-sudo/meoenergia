@@ -1,13 +1,14 @@
 "use client"
 
-import { ArrowLeft, Send } from "lucide-react"
+import { ArrowLeft, Paperclip, Send, X } from "lucide-react"
 import { useFormContext } from "react-hook-form"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { FileInput } from "@/components/ui/file-input"
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
 import { documentFieldsPF, documentFieldsPJ } from "@/lib/constants"
 
 interface Step5Props {
@@ -16,6 +17,122 @@ interface Step5Props {
 	createOrderFromSimulation?: boolean
 	onToggleCreateOrderFromSimulation?: (value: boolean) => void
 	showInputs?: boolean
+}
+
+function DocumentRow({
+	doc,
+	value,
+	onChange,
+	onRemove,
+}: {
+	doc: { name: string; label: string; required: boolean; subtypes?: readonly string[] | string[] }
+	value: FileList | File | undefined
+	onChange: (file: FileList | undefined) => void
+	onRemove: () => void
+}) {
+	const [selectedSubtype, setSelectedSubtype] = useState<string>(
+		doc.subtypes && doc.subtypes.length === 1 ? doc.subtypes[0] : ""
+	)
+	const fileInputRef = useRef<HTMLInputElement>(null)
+
+	const fileName = value instanceof File
+		? value.name
+		: value instanceof FileList && value.length > 0
+			? value[0].name
+			: null
+
+	const hasFile = !!fileName
+
+	return (
+		<div className="space-y-1">
+			<div className="grid grid-cols-[180px_1fr_auto] items-center gap-3 py-2">
+				{/* Col 1: Label + Badge */}
+				<div className="space-y-1.5">
+					<p className="text-xs font-medium leading-tight">
+						{doc.label}
+						{doc.required ? <span className="text-destructive ml-0.5">*</span> : <span className="text-muted-foreground text-[10px] ml-1 italic">(Opcional)</span>}
+					</p>
+					<Badge className={`text-[11px] px-3 py-1 w-full justify-center border-0 ${hasFile ? "bg-amber-500 text-white hover:bg-amber-500" : "bg-orange-500 text-white hover:bg-orange-500"}`}>
+						{hasFile ? "Aguardando analise" : "Pendente"}
+					</Badge>
+				</div>
+
+				{/* Col 2: Subtipo + formatos */}
+				<div className="space-y-1">
+					{doc.subtypes && doc.subtypes.length > 1 ? (
+						<Select value={selectedSubtype} onValueChange={setSelectedSubtype}>
+							<SelectTrigger className="h-8 text-xs">
+								<SelectValue placeholder="Selecione..." />
+							</SelectTrigger>
+							<SelectContent>
+								{doc.subtypes.map((st) => (
+									<SelectItem key={st} value={st} className="text-xs">{st}</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					) : doc.subtypes && doc.subtypes.length === 1 ? (
+						<div className="h-8 flex items-center border rounded-md px-3">
+							<span className="text-xs text-muted-foreground">{doc.subtypes[0]}</span>
+						</div>
+					) : (
+						<div className="h-8" />
+					)}
+					<p className="text-[10px] text-muted-foreground">Formatos aceitos: .jpg, .jpeg, .png e .pdf</p>
+				</div>
+
+				{/* Col 3: Action button */}
+				<div className="flex items-center gap-1">
+					{hasFile ? (
+						<>
+							<Button
+								type="button"
+								size="sm"
+								variant="secondary"
+								className="h-8 text-xs gap-1.5 max-w-[160px]"
+								onClick={() => fileInputRef.current?.click()}
+							>
+								<Paperclip className="size-3.5 shrink-0" />
+								<span className="truncate">{fileName}</span>
+							</Button>
+							<Button
+								type="button"
+								size="icon"
+								variant="ghost"
+								className="h-8 w-8 text-muted-foreground hover:text-destructive"
+								onClick={onRemove}
+							>
+								<X className="size-3.5" />
+							</Button>
+						</>
+					) : (
+						<Button
+							type="button"
+							size="sm"
+							className="h-8 text-xs gap-1.5 bg-blue-500 hover:bg-blue-600 text-white"
+							onClick={() => fileInputRef.current?.click()}
+						>
+							<Paperclip className="size-3.5" />
+							Anexar arquivo
+						</Button>
+					)}
+					<input
+						ref={fileInputRef}
+						type="file"
+						accept=".jpg,.jpeg,.png,.pdf"
+						className="hidden"
+						onChange={(e) => {
+							const files = e.target.files
+							if (files && files.length > 0) {
+								onChange(files)
+							}
+							e.target.value = ""
+						}}
+					/>
+				</div>
+			</div>
+			<Separator />
+		</div>
+	)
 }
 
 export function SimulationStep5({
@@ -27,7 +144,6 @@ export function SimulationStep5({
 }: Step5Props) {
 	const form = useFormContext()
 
-	// Lê o tipo apenas após o mount para evitar hydration mismatch
 	const [mounted, setMounted] = useState(false)
 	useEffect(() => {
 		setMounted(true)
@@ -36,7 +152,6 @@ export function SimulationStep5({
 	const customerType = form.watch("type")
 	const isPF = mounted ? customerType === "pf" : false
 
-	// Lista de documentos conforme o tipo do cliente
 	const fields = isPF ? documentFieldsPF : documentFieldsPJ
 
 	return (
@@ -46,36 +161,24 @@ export function SimulationStep5({
 				{mounted && (
 					<p className="text-sm text-muted-foreground">
 						{isPF
-							? "Documentos necessários para Pessoa Física."
-							: "Documentos necessários para Pessoa Jurídica."}
+							? "Documentos necessarios para Pessoa Fisica."
+							: "Documentos necessarios para Pessoa Juridica."}
 					</p>
 				)}
 			</div>
 
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+			<div className="text-center">
+				<p className="text-sm font-semibold">Anexe os documentos.</p>
+			</div>
+
+			<div className="space-y-0">
 				{fields.map((doc) => (
-					<FormField
+					<DocumentRow
 						key={doc.name}
-						control={form.control}
-						name={doc.name}
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>{doc.label}</FormLabel>
-								<FormControl>
-									<FileInput
-										value={field.value}
-										onChange={field.onChange}
-										onRemove={() =>
-											form.setValue(doc.name, undefined, {
-												shouldValidate: true,
-											})
-										}
-										className="w-full"
-									/>
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
+						doc={doc}
+						value={form.watch(doc.name)}
+						onChange={(files) => form.setValue(doc.name, files, { shouldValidate: true })}
+						onRemove={() => form.setValue(doc.name, undefined, { shouldValidate: true })}
 					/>
 				))}
 			</div>
@@ -96,10 +199,10 @@ export function SimulationStep5({
 								htmlFor="create-order-from-simulation"
 								className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
 							>
-								Criar pedido a partir desta simulação
+								Criar pedido a partir desta simulacao
 							</label>
 							<p className="text-sm text-muted-foreground">
-								Se marcado, ao salvar a simulação o sistema também criará um pedido vinculado.
+								Se marcado, ao salvar a simulacao o sistema tambem criara um pedido vinculado.
 							</p>
 						</div>
 					</div>
