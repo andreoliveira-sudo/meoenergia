@@ -70,8 +70,10 @@ function SheetSkeleton() {
 }
 
 import getOrderHistoryAction from "@/actions/orders/get-order-history"
+import getCurrentUser from "@/actions/auth/get-current-user"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CheckCircle, Circle, Clock, Info } from "lucide-react"
+import { OrderDocumentsTab } from "@/components/orders/order-documents-tab"
 
 export function ViewOrderSheet({ orderId, open, onOpenChange, defaultTab = "details" }: ViewOrderSheetProps) {
 	// Query existing order details...
@@ -96,9 +98,18 @@ export function ViewOrderSheet({ orderId, open, onOpenChange, defaultTab = "deta
 		enabled: open && !!orderId,
 	})
 
+	// Query current user for admin check
+	const { data: currentUser } = useQuery({
+		queryKey: ["current-user"],
+		queryFn: () => getCurrentUser(),
+		enabled: open,
+		staleTime: 5 * 60 * 1000, // cache 5min
+	})
+
 	const order = queryData?.success ? queryData.data : null
 	const customer = order?.customer
 	const history = historyData?.success ? historyData.data : []
+	const isAdmin = currentUser?.role === "admin" || currentUser?.role === "staff"
 
 	const totalValue = order?.equipment_value && order?.labor_value ? (order.equipment_value || 0) + (order.labor_value || 0) + (order.other_costs || 0) : 0
 
@@ -140,6 +151,7 @@ export function ViewOrderSheet({ orderId, open, onOpenChange, defaultTab = "deta
 								<SheetTitle className="text-xl">Pedido #{order.kdi}</SheetTitle>
 								<TabsList>
 									<TabsTrigger value="details">Detalhes</TabsTrigger>
+									<TabsTrigger value="documents">Docs</TabsTrigger>
 									<TabsTrigger value="history">Histórico</TabsTrigger>
 								</TabsList>
 							</div>
@@ -215,6 +227,14 @@ export function ViewOrderSheet({ orderId, open, onOpenChange, defaultTab = "deta
 									</div>
 								</div>
 							</div>
+						</TabsContent>
+
+						<TabsContent value="documents" className="flex-1 p-6 mt-0">
+							<OrderDocumentsTab
+								orderId={orderId}
+								customerType={(customer?.type as "pf" | "pj") || "pf"}
+								isAdmin={isAdmin}
+							/>
 						</TabsContent>
 
 						<TabsContent value="history" className="flex-1 p-6 space-y-6 mt-0">
