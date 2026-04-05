@@ -54,6 +54,7 @@ export const OrdersTableActions = ({ order }: { order: OrderWithRelations }) => 
 	const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false)
 	const [isManageRatesDialogOpen, setIsManageRatesDialogOpen] = useState(false)
 	const [isViewSheetOpen, setIsViewSheetOpen] = useState(false)
+	const [viewSheetTab, setViewSheetTab] = useState<"details" | "history" | "documents">("details")
 	const [deleteOpen, setDeleteOpen] = useState(false)
 	const [isDeletePending, startDeleteTransition] = useTransition()
 	const [isPdfPending, startPdfTransition] = useTransition()
@@ -201,7 +202,7 @@ export const OrdersTableActions = ({ order }: { order: OrderWithRelations }) => 
 
 				<Tooltip>
 					<TooltipTrigger asChild>
-						<Button variant="ghost" size="icon" onClick={() => setIsViewSheetOpen(true)}>
+						<Button variant="ghost" size="icon" onClick={() => { setViewSheetTab("details"); setIsViewSheetOpen(true); }}>
 							<Eye className="h-4 w-4" />
 							<span className="sr-only">Visualizar Detalhes</span>
 						</Button>
@@ -241,67 +242,15 @@ export const OrdersTableActions = ({ order }: { order: OrderWithRelations }) => 
 					<TooltipContent>Baixar Proposta PDF</TooltipContent>
 				</Tooltip>
 
-				<DropdownMenu
-					open={isDownloadDropdownOpen}
-					onOpenChange={(open) => {
-						setIsDownloadDropdownOpen(open)
-						if (!open) {
-							setSelectedDocs(new Set())
-						}
-					}}
-				>
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<DropdownMenuTrigger asChild>
-								<Button variant="ghost" size="icon" disabled={isDownloadPending}>
-									{isDownloadPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-									<span className="sr-only">Baixar Documentos</span>
-								</Button>
-							</DropdownMenuTrigger>
-						</TooltipTrigger>
-						<TooltipContent>Baixar Documentos Anexados</TooltipContent>
-					</Tooltip>
-					<DropdownMenuContent align="end">
-						<DropdownMenuLabel>Selecione para baixar</DropdownMenuLabel>
-						<DropdownMenuSeparator />
-						{isLoadingFiles ? (
-							<DropdownMenuItem disabled>
-								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-								Carregando...
-							</DropdownMenuItem>
-						) : existingDocumentFields.length > 0 ? (
-							<>
-								{existingDocumentFields.map((doc) => (
-									<DropdownMenuCheckboxItem
-										key={doc.name}
-										checked={selectedDocs.has(doc.name)}
-										onSelect={(e) => e.preventDefault()}
-										onCheckedChange={(checked) => {
-											setSelectedDocs((prev) => {
-												const newSet = new Set(prev)
-												if (checked) {
-													newSet.add(doc.name)
-												} else {
-													newSet.delete(doc.name)
-												}
-												return newSet
-											})
-										}}
-									>
-										{doc.label.replace(" *", "")}
-									</DropdownMenuCheckboxItem>
-								))}
-								<DropdownMenuSeparator />
-								<DropdownMenuItem onSelect={handleFileDownload} disabled={selectedDocs.size === 0}>
-									<Download className="mr-2 h-4 w-4" />
-									Baixar {selectedDocs.size > 0 ? `(${selectedDocs.size})` : ""}
-								</DropdownMenuItem>
-							</>
-						) : (
-							<DropdownMenuItem disabled>Nenhum documento anexado</DropdownMenuItem>
-						)}
-					</DropdownMenuContent>
-				</DropdownMenu>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button variant="ghost" size="icon" onClick={() => { setViewSheetTab("documents"); setIsViewSheetOpen(true); }}>
+							<FileText className="h-4 w-4" />
+							<span className="sr-only">Documentos</span>
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent>Documentos</TooltipContent>
+				</Tooltip>
 
 				<Tooltip>
 					<TooltipTrigger asChild>
@@ -330,7 +279,7 @@ export const OrdersTableActions = ({ order }: { order: OrderWithRelations }) => 
 			<EditRatesDialog orderId={order.id} open={isManageRatesDialogOpen} onOpenChange={setIsManageRatesDialogOpen} />
 			<EditOrderDialog orderId={order.id} open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} />
 			<UpdateOrderStatusDialog order={order} open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen} />
-			<ViewOrderSheet orderId={order.id} open={isViewSheetOpen} onOpenChange={setIsViewSheetOpen} />
+			<ViewOrderSheet orderId={order.id} open={isViewSheetOpen} onOpenChange={setIsViewSheetOpen} defaultTab={viewSheetTab} />
 
 			{/* RevoCred Integration Log Dialog */}
 			{isLogDialogOpen && (

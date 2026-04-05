@@ -16,6 +16,7 @@ interface ViewOrderSheetProps {
 	orderId: string
 	open: boolean
 	onOpenChange: (open: boolean) => void
+	defaultTab?: "details" | "history" | "documents"
 }
 
 const DetailItem = ({ icon: Icon, label, value }: { icon: React.ComponentType<{ className?: string }>; label: string; value?: string | number | null }) => {
@@ -72,7 +73,7 @@ import getOrderHistoryAction from "@/actions/orders/get-order-history"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CheckCircle, Circle, Clock, Info } from "lucide-react"
 
-export function ViewOrderSheet({ orderId, open, onOpenChange }: ViewOrderSheetProps) {
+export function ViewOrderSheet({ orderId, open, onOpenChange, defaultTab = "details" }: ViewOrderSheetProps) {
 	// Query existing order details...
 	const {
 		data: queryData,
@@ -133,7 +134,7 @@ export function ViewOrderSheet({ orderId, open, onOpenChange }: ViewOrderSheetPr
 						</div>
 					</>
 				) : (
-					<Tabs defaultValue="details" className="h-full flex flex-col">
+					<Tabs defaultValue={defaultTab} className="h-full flex flex-col">
 						<SheetHeader className="p-6 space-y-2 text-left bg-muted/30 border-b">
 							<div className="flex items-center justify-between">
 								<SheetTitle className="text-xl">Pedido #{order.kdi}</SheetTitle>
