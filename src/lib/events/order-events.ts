@@ -3,25 +3,44 @@ import { sendWhatsAppMessage } from '@/services/evolution-api/send-message'
 
 // Mapa de status para Trigger Key do banco de dados
 const STATUS_TRIGGER_MAP: Record<string, string> = {
-    // Análise
+    // Status de Credito
     analysis_pending: "ORDER_ANALYSIS_PENDING",
     analysis_approved: "ORDER_ANALYSIS_APPROVED",
     analysis_rejected: "ORDER_ANALYSIS_REJECTED",
 
-    // Documentação
+    // Status do Pedido — Documentacao
+    in_review: "ORDER_IN_REVIEW",
     documents_pending: "DOCUMENTS_PENDING",
     docs_analysis: "ORDER_DOCS_ANALYSIS",
+    documents_issue: "ORDER_DOCUMENTS_ISSUE",
+    awaiting_signature: "ORDER_AWAITING_SIGNATURE",
 
-    // Execução
+    // Status do Pedido — Distribuidor
+    awaiting_distributor_docs: "ORDER_AWAITING_DISTRIBUTOR_DOCS",
+    analyzing_distributor_docs: "ORDER_ANALYZING_DISTRIBUTOR_DOCS",
+    distributor_docs_issue: "ORDER_DISTRIBUTOR_DOCS_ISSUE",
+
+    // Status do Pedido — Equipamentos
+    equipment_separation: "ORDER_EQUIPMENT_SEPARATION",
+    equipment_transit: "ORDER_EQUIPMENT_TRANSIT",
+    equipment_delivered: "ORDER_EQUIPMENT_DELIVERED",
+
+    // Status do Pedido — Integrador
+    awaiting_integrator_docs: "ORDER_AWAITING_INTEGRATOR_DOCS",
+    analyzing_integrator_docs: "ORDER_ANALYZING_INTEGRATOR_DOCS",
+    integrator_docs_issue: "ORDER_INTEGRATOR_DOCS_ISSUE",
+
+    // Status do Pedido — Finalizacao
+    finished: "ORDER_FINISHED",
+    canceled: "ORDER_CANCELED",
+    rejected: "ORDER_REJECTED",
+
+    // Legado (manter para compatibilidade)
     sending_distributor_invoice: "ORDER_SENDING_DISTRIBUTOR_INVOICE",
     payment_distributor: "ORDER_PAYMENT_DISTRIBUTOR",
     access_opinion: "ORDER_ACCESS_OPINION",
     initial_payment_integrator: "ORDER_INITIAL_PAYMENT_INTEGRATOR",
     final_payment_integrator: "ORDER_FINAL_PAYMENT_INTEGRATOR",
-
-    // Finalização
-    finished: "ORDER_FINISHED",
-    canceled: "ORDER_CANCELED",
 }
 
 export async function handleOrderStatusChange(orderId: string, newStatus: string, authorId?: string) {

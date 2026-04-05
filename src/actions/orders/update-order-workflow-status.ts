@@ -4,6 +4,8 @@ import { getCurrentUser } from "@/actions/auth"
 import type { OrderWorkflowStatus } from "@/lib/definitions/orders"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
+import { fireWebhookByKdi } from "@/lib/webhook-sender"
+import { handleOrderStatusChange } from "@/lib/events/order-events"
 
 interface UpdateOrderWorkflowStatusParams {
 	orderId: string
@@ -12,10 +14,6 @@ interface UpdateOrderWorkflowStatusParams {
 
 /**
  * Calcula deadline baseado no novo status do pedido.
- * - documents_pending: 20 dias (parceiro enviar docs)
- * - docs_analysis: 24h (admin analisar)
- * - documents_issue: 20 dias (parceiro corrigir)
- * - Outros: sem prazo (null)
  */
 function calculateDeadline(status: OrderWorkflowStatus): string | null {
 	const now = new Date()
@@ -62,6 +60,16 @@ export async function updateOrderWorkflowStatus({ orderId, orderStatus }: Update
 		const supabase = createAdminClient()
 		const deadline = calculateDeadline(orderStatus)
 
+		// Buscar KDI do pedido para webhook
+		const { data: orderRow } = await supabase
+			.from("orders")
+			.select("kdi")
+			.eq("id", orderId)
+			.single()
+
+		const kdi = (orderRow as any)?.kdi
+
+		// Atualizar order_status e deadline
 		const { error } = await supabase
 			.from("orders")
 			.update({ order_status: orderStatus, deadline } as any)
@@ -71,6 +79,18 @@ export async function updateOrderWorkflowStatus({ orderId, orderStatus }: Update
 			console.error("Erro ao atualizar order_status:", error)
 			return { success: false, message: error.message }
 		}
+
+		// Disparar webhook para parceiro (fire-and-forget) — mesmo comportamento do status antigo
+		if (kdi) {
+			fireWebhookByKdi(String(kdi), orderStatus).catch((err) =>
+				console.error(`[update-order-workflow] Erro webhook KDI ${kdi}:`, err)
+			)
+		}
+
+		// Disparar notificacao interna/WhatsApp (fire-and-forget)
+		handleOrderStatusChange(orderId, orderStatus, user.id || undefined).catch((err) =>
+			console.error("[update-order-workflow] Erro notificacao:", err)
+		)
 
 		revalidatePath("/dashboard/orders")
 		return { success: true, message: "Status do pedido atualizado com sucesso" }
