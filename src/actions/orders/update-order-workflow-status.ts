@@ -20,13 +20,33 @@ interface UpdateOrderWorkflowStatusParams {
 function calculateDeadline(status: OrderWorkflowStatus): string | null {
 	const now = new Date()
 	switch (status) {
+		// 20 dias — parceiro deve agir
 		case "documents_pending":
 		case "documents_issue":
-			// 20 dias
+		case "awaiting_distributor_docs":
+		case "distributor_docs_issue":
+		case "awaiting_integrator_docs":
+		case "integrator_docs_issue":
+		case "awaiting_signature":
 			return new Date(now.getTime() + 20 * 24 * 60 * 60 * 1000).toISOString()
+
+		// 24 horas — admin deve analisar
 		case "docs_analysis":
-			// 24 horas
+		case "analyzing_distributor_docs":
+		case "analyzing_integrator_docs":
 			return new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString()
+
+		// 10 dias — logistica
+		case "equipment_separation":
+		case "equipment_transit":
+			return new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000).toISOString()
+
+		// Sem prazo — status finais ou iniciais
+		case "in_review":
+		case "rejected":
+		case "finished":
+		case "canceled":
+		case "equipment_delivered":
 		default:
 			return null
 	}
