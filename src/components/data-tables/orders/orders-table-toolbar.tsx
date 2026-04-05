@@ -7,6 +7,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ServerFacetedFilter } from "@/components/ui/server-faceted-filter"
 
+const deadlineFilterOptions = [
+	{ label: "Com prazo ativo", value: "active" },
+	{ label: "Vencido", value: "overdue" },
+	{ label: "Vence em 24h", value: "urgent" },
+	{ label: "Vence em 5 dias", value: "warning" },
+]
+
 const creditStatusOptions = [
 	{ label: "Ag. Análise", value: "analysis_pending" },
 	{ label: "Aprovado", value: "analysis_approved" },
@@ -40,6 +47,8 @@ interface OrdersTableToolbarProps {
 	onStatusChange: (values: string[]) => void
 	orderStatusFilter: string[]
 	onOrderStatusChange: (values: string[]) => void
+	deadlineFilter: string[]
+	onDeadlineChange: (values: string[]) => void
 	stateFilter: string[]
 	onStateChange: (values: string[]) => void
 	cityFilter: string[]
@@ -72,6 +81,8 @@ export const OrdersTableToolbar = ({
 	onStatusChange,
 	orderStatusFilter,
 	onOrderStatusChange,
+	deadlineFilter,
+	onDeadlineChange,
 	stateFilter,
 	onStateChange,
 	cityFilter,
@@ -123,6 +134,9 @@ export const OrdersTableToolbar = ({
 
 				{/* Status Pedido */}
 				<ServerFacetedFilter title="St. Pedido" selectedValues={orderStatusFilter} onChange={onOrderStatusChange} options={orderStatusOptions} />
+
+				{/* Prazo */}
+				<ServerFacetedFilter title="Prazo" selectedValues={deadlineFilter} onChange={onDeadlineChange} options={deadlineFilterOptions} />
 
 				{/* Criado por */}
 				<ServerFacetedFilter title="Criado por" selectedValues={creatorFilter} onChange={onCreatorChange} options={creatorOptions} />

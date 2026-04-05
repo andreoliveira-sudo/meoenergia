@@ -47,6 +47,7 @@ export const OrdersTable = ({
 	const [searchFilter, setSearchFilter] = useState("")
 	const [statusFilter, setStatusFilter] = useState<string[]>(filterStatus ? [filterStatus] : [])
 	const [orderStatusFilter, setOrderStatusFilter] = useState<string[]>([])
+	const [deadlineFilter, setDeadlineFilter] = useState<string[]>([])
 	const [stateFilter, setStateFilter] = useState<string[]>([])
 	const [cityFilter, setCityFilter] = useState<string[]>([])
 	const [partnerFilter, setPartnerFilter] = useState<string[]>([])
@@ -92,7 +93,7 @@ export const OrdersTable = ({
 	// Resetar página ao mudar filtros
 	useEffect(() => {
 		setPagination((prev) => ({ ...prev, pageIndex: 0 }))
-	}, [debouncedSearch, statusFilter, orderStatusFilter, stateFilter, cityFilter, partnerFilter, managerFilter, creatorFilter, dateFromFilter, dateToFilter, filterType])
+	}, [debouncedSearch, statusFilter, orderStatusFilter, deadlineFilter, stateFilter, cityFilter, partnerFilter, managerFilter, creatorFilter, dateFromFilter, dateToFilter, filterType])
 
 	// Montar objeto de filtros para o server
 	const serverFilters: OrdersFilter = useMemo(
@@ -124,8 +125,34 @@ export const OrdersTable = ({
 		refetchIntervalInBackground: false
 	})
 
-	const data = result?.data ?? []
-	const totalCount = result?.totalCount ?? 0
+	const rawData = result?.data ?? []
+
+	// Filtro de prazo (client-side pois deadline é calculado)
+	const data = useMemo(() => {
+		if (deadlineFilter.length === 0) return rawData
+		return rawData.filter((order) => {
+			if (!order.deadline) {
+				return false // sem prazo = não mostra quando filtro de prazo está ativo
+			}
+			const now = new Date()
+			const dl = new Date(order.deadline)
+			const diffMs = dl.getTime() - now.getTime()
+			const diffHours = diffMs / (1000 * 60 * 60)
+			const diffDays = diffMs / (1000 * 60 * 60 * 24)
+
+			return deadlineFilter.some((f) => {
+				switch (f) {
+					case "active": return diffMs > 0
+					case "overdue": return diffMs <= 0
+					case "urgent": return diffMs > 0 && diffHours <= 24
+					case "warning": return diffMs > 0 && diffDays <= 5
+					default: return false
+				}
+			})
+		})
+	}, [rawData, deadlineFilter])
+
+	const totalCount = deadlineFilter.length > 0 ? data.length : (result?.totalCount ?? 0)
 	const facets = result?.facets ?? { states: [], cities: [], partners: [], managers: [], creators: [] }
 	const pageCount = Math.ceil(totalCount / pagination.pageSize)
 
@@ -175,6 +202,7 @@ export const OrdersTable = ({
 		setSearchFilter("")
 		setStatusFilter([])
 		setOrderStatusFilter([])
+		setDeadlineFilter([])
 		setStateFilter([])
 		setCityFilter([])
 		setPartnerFilter([])
@@ -188,6 +216,7 @@ export const OrdersTable = ({
 		searchFilter ||
 		statusFilter.length > 0 ||
 		orderStatusFilter.length > 0 ||
+		deadlineFilter.length > 0 ||
 		stateFilter.length > 0 ||
 		cityFilter.length > 0 ||
 		partnerFilter.length > 0 ||
@@ -206,6 +235,8 @@ export const OrdersTable = ({
 				onStatusChange={setStatusFilter}
 				orderStatusFilter={orderStatusFilter}
 				onOrderStatusChange={setOrderStatusFilter}
+				deadlineFilter={deadlineFilter}
+				onDeadlineChange={setDeadlineFilter}
 				stateFilter={stateFilter}
 				onStateChange={setStateFilter}
 				cityFilter={cityFilter}
