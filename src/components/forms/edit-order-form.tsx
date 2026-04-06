@@ -190,7 +190,7 @@ function EditOrderContent({
 									onBack={backStep}
 								/>
 							)}
-							{currentStep === 5 && <SimulationStep5 onSubmit={form.handleSubmit(handleSubmitEntireForm)} onBack={backStep} />}
+							{currentStep === 5 && <SimulationStep5 onSubmit={form.handleSubmit(handleSubmitEntireForm)} onBack={backStep} orderId={orderId} />}
 						</motion.div>
 					</AnimatePresence>
 				</CardContent>

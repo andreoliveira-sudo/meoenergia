@@ -1,8 +1,9 @@
 "use client"
 
-import { ArrowLeft, Paperclip, Send, X } from "lucide-react"
+import { ArrowLeft, Loader2, Paperclip, Send, X } from "lucide-react"
 import { useFormContext } from "react-hook-form"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
+import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -17,32 +18,99 @@ interface Step5Props {
 	createOrderFromSimulation?: boolean
 	onToggleCreateOrderFromSimulation?: (value: boolean) => void
 	showInputs?: boolean
+	orderId?: string
 }
+
+const ACCEPTED_TYPES = ["image/jpeg", "image/jpg", "image/png", "application/pdf"]
+const MAX_FILE_SIZE = 10 * 1024 * 1024
 
 function DocumentRow({
 	doc,
-	value,
-	onChange,
-	onRemove,
+	orderId,
 }: {
 	doc: { name: string; label: string; required: boolean; subtypes?: readonly string[] | string[] }
-	value: FileList | File | undefined
-	onChange: (file: FileList | undefined) => void
-	onRemove: () => void
+	orderId?: string
 }) {
 	const [selectedSubtype, setSelectedSubtype] = useState<string>(
 		doc.subtypes && doc.subtypes.length === 1 ? doc.subtypes[0] : ""
 	)
-
-	const inputId = `file-input-${doc.name}`
-
-	const fileName = value instanceof File
-		? value.name
-		: value instanceof FileList && value.length > 0
-			? value[0].name
-			: null
+	const [uploading, setUploading] = useState(false)
+	const [fileName, setFileName] = useState<string | null>(null)
+	const [deleting, setDeleting] = useState(false)
+	const fileInputRef = useRef<HTMLInputElement>(null)
 
 	const hasFile = !!fileName
+
+	const handleUpload = useCallback(async (file: File) => {
+		if (!orderId) {
+			toast.error("Salve o pedido antes de anexar documentos.")
+			return
+		}
+		if (!ACCEPTED_TYPES.includes(file.type)) {
+			toast.error("Formato invalido. Aceitos: JPG, PNG, PDF.")
+			return
+		}
+		if (file.size > MAX_FILE_SIZE) {
+			toast.error("Arquivo muito grande. Maximo: 10MB.")
+			return
+		}
+
+		setUploading(true)
+		try {
+			const storageKey = selectedSubtype
+				? `${doc.name}_${selectedSubtype.replace(/\s+/g, "_")}`
+				: doc.name
+
+			const formData = new FormData()
+			formData.append("orderId", orderId)
+			formData.append("fieldName", doc.name)
+			formData.append("storageKey", storageKey)
+			formData.append("file", file)
+			if (selectedSubtype) formData.append("docSubtype", selectedSubtype)
+
+			const response = await fetch("/meo/api/v1/documents/upload", {
+				method: "POST",
+				body: formData,
+			})
+			const result = await response.json()
+
+			if (!response.ok || !result.success) {
+				toast.error(result.message || "Erro ao enviar arquivo.")
+				return
+			}
+
+			setFileName(file.name)
+			toast.success("Arquivo enviado!")
+		} catch {
+			toast.error("Erro ao enviar arquivo.")
+		} finally {
+			setUploading(false)
+			if (fileInputRef.current) fileInputRef.current.value = ""
+		}
+	}, [orderId, doc.name, selectedSubtype])
+
+	const handleDelete = useCallback(async () => {
+		if (!orderId) return
+		setDeleting(true)
+		try {
+			const response = await fetch("/meo/api/v1/documents/delete", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ orderId, fieldName: doc.name }),
+			})
+			const result = await response.json()
+			if (result.success) {
+				setFileName(null)
+				toast.success("Arquivo removido.")
+			} else {
+				toast.error(result.message || "Erro ao remover.")
+			}
+		} catch {
+			toast.error("Erro ao remover.")
+		} finally {
+			setDeleting(false)
+		}
+	}, [orderId, doc.name])
 
 	return (
 		<div className="space-y-1">
@@ -85,45 +153,45 @@ function DocumentRow({
 				<div className="flex items-center gap-1">
 					{hasFile ? (
 						<>
-							<label
-								htmlFor={inputId}
-								className="inline-flex items-center justify-center gap-1.5 h-8 px-3 text-xs rounded-md border bg-secondary text-secondary-foreground hover:bg-secondary/80 cursor-pointer max-w-[160px]"
-							>
+							<span className="inline-flex items-center gap-1.5 h-8 px-3 text-xs rounded-md border bg-secondary text-secondary-foreground max-w-[160px]">
 								<Paperclip className="size-3.5 shrink-0" />
 								<span className="truncate">{fileName}</span>
-							</label>
+							</span>
 							<Button
 								type="button"
 								size="icon"
 								variant="ghost"
 								className="h-8 w-8 text-muted-foreground hover:text-destructive"
-								onClick={onRemove}
+								disabled={deleting}
+								onClick={handleDelete}
 							>
-								<X className="size-3.5" />
+								{deleting ? <Loader2 className="size-3.5 animate-spin" /> : <X className="size-3.5" />}
 							</Button>
 						</>
 					) : (
-						<label
-							htmlFor={inputId}
-							className="inline-flex items-center justify-center gap-1.5 h-8 px-3 text-xs rounded-md bg-blue-500 hover:bg-blue-600 text-white cursor-pointer"
-						>
-							<Paperclip className="size-3.5" />
-							Anexar arquivo
-						</label>
+						<>
+							<input
+								ref={fileInputRef}
+								type="file"
+								accept=".jpg,.jpeg,.png,.pdf"
+								className="hidden"
+								onChange={(e) => {
+									const file = e.target.files?.[0]
+									if (file) handleUpload(file)
+								}}
+							/>
+							<Button
+								type="button"
+								size="sm"
+								className="h-8 text-xs gap-1.5 bg-blue-500 hover:bg-blue-600 text-white"
+								disabled={uploading}
+								onClick={() => fileInputRef.current?.click()}
+							>
+								{uploading ? <Loader2 className="size-3.5 animate-spin" /> : <Paperclip className="size-3.5" />}
+								Anexar arquivo
+							</Button>
+						</>
 					)}
-					<input
-						id={inputId}
-						type="file"
-						accept=".jpg,.jpeg,.png,.pdf"
-						className="hidden"
-						onChange={(e) => {
-							const files = e.target.files
-							if (files && files.length > 0) {
-								onChange(files)
-							}
-							e.target.value = ""
-						}}
-					/>
 				</div>
 			</div>
 			<Separator />
@@ -137,6 +205,7 @@ export function SimulationStep5({
 	createOrderFromSimulation = false,
 	onToggleCreateOrderFromSimulation,
 	showInputs,
+	orderId: orderIdProp,
 }: Step5Props) {
 	const form = useFormContext()
 
@@ -147,11 +216,12 @@ export function SimulationStep5({
 
 	const customerType = form.watch("type")
 	const isPF = mounted ? customerType === "pf" : false
-
 	const fields = isPF ? documentFieldsPF : documentFieldsPJ
 
+	const orderId = orderIdProp
+
 	return (
-		<form className="space-y-6">
+		<div className="space-y-6">
 			<div className="space-y-1">
 				<h3 className="text-lg font-medium">Passo 5: Anexo de Documentos</h3>
 				{mounted && (
@@ -167,14 +237,18 @@ export function SimulationStep5({
 				<p className="text-sm font-semibold">Anexe os documentos.</p>
 			</div>
 
+			{!orderId && (
+				<div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-xs text-amber-700">
+					Salve o pedido primeiro (botao Salvar) para poder anexar documentos.
+				</div>
+			)}
+
 			<div className="space-y-0">
 				{fields.map((doc) => (
 					<DocumentRow
 						key={doc.name}
 						doc={doc}
-						value={form.watch(doc.name)}
-						onChange={(files) => form.setValue(doc.name, files, { shouldValidate: true })}
-						onRemove={() => form.setValue(doc.name, undefined, { shouldValidate: true })}
+						orderId={orderId}
 					/>
 				))}
 			</div>
@@ -214,6 +288,6 @@ export function SimulationStep5({
 					Salvar
 				</Button>
 			</div>
-		</form>
+		</div>
 	)
 }
