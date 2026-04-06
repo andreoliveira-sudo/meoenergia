@@ -44,6 +44,7 @@ function SheetSkeleton() {
 	return (
 		<div className="p-6 space-y-6">
 			<SheetHeader className="p-0 space-y-2 text-left bg-muted/30 border-b">
+				<SheetTitle className="sr-only">Carregando pedido...</SheetTitle>
 				<Skeleton className="h-6 w-3/4" />
 				<Skeleton className="h-4 w-1/2" />
 			</SheetHeader>
