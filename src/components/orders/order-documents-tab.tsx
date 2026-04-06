@@ -369,6 +369,26 @@ export function OrderDocumentsTab({ orderId, customerType, isAdmin = false, dead
 		queryClient.invalidateQueries({ queryKey: ["order-documents", orderId] })
 	}, [queryClient, orderId])
 
+	const handleSubmitForAnalysis = useCallback(async () => {
+		setSubmitting(true)
+		try {
+			const { updateOrderWorkflowStatus } = await import("@/actions/orders/update-order-workflow-status")
+			const result = await updateOrderWorkflowStatus({ orderId, orderStatus: "docs_analysis" })
+			if (result.success) {
+				toast.success("Documentos submetidos para analise!")
+				handleRefresh()
+			} else {
+				toast.error(result.message)
+			}
+		} catch {
+			toast.error("Erro ao submeter documentos.")
+		} finally {
+			setSubmitting(false)
+		}
+	}, [orderId, handleRefresh])
+
+	// --- Early returns (DEPOIS de todos os hooks) ---
+
 	if (isLoading) {
 		return (
 			<div className="space-y-3">
@@ -405,24 +425,6 @@ export function OrderDocumentsTab({ orderId, customerType, isAdmin = false, dead
 	const totalRequired = requiredDocs.length
 	const uploadedRequired = requiredDocs.filter((d) => d.hasFile).length
 	const allRequiredUploaded = uploadedRequired === totalRequired && totalRequired > 0
-
-	const handleSubmitForAnalysis = useCallback(async () => {
-		setSubmitting(true)
-		try {
-			const { updateOrderWorkflowStatus } = await import("@/actions/orders/update-order-workflow-status")
-			const result = await updateOrderWorkflowStatus({ orderId, orderStatus: "docs_analysis" })
-			if (result.success) {
-				toast.success("Documentos submetidos para analise!")
-				handleRefresh()
-			} else {
-				toast.error(result.message)
-			}
-		} catch {
-			toast.error("Erro ao submeter documentos.")
-		} finally {
-			setSubmitting(false)
-		}
-	}, [orderId, handleRefresh])
 
 	return (
 		<div className="space-y-4">
