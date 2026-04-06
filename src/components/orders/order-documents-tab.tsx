@@ -351,6 +351,7 @@ function DocumentRow({
 
 export function OrderDocumentsTab({ orderId, customerType, isAdmin = false, deadline }: OrderDocumentsTabProps) {
 	const queryClient = useQueryClient()
+	const [submitting, setSubmitting] = useState(false)
 
 	const {
 		data: docsResponse,
@@ -404,7 +405,6 @@ export function OrderDocumentsTab({ orderId, customerType, isAdmin = false, dead
 	const totalRequired = requiredDocs.length
 	const uploadedRequired = requiredDocs.filter((d) => d.hasFile).length
 	const allRequiredUploaded = uploadedRequired === totalRequired && totalRequired > 0
-	const [submitting, setSubmitting] = useState(false)
 
 	const handleSubmitForAnalysis = useCallback(async () => {
 		setSubmitting(true)
