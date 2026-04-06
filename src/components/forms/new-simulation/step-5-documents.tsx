@@ -2,7 +2,7 @@
 
 import { ArrowLeft, Paperclip, Send, X } from "lucide-react"
 import { useFormContext } from "react-hook-form"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -33,7 +33,8 @@ function DocumentRow({
 	const [selectedSubtype, setSelectedSubtype] = useState<string>(
 		doc.subtypes && doc.subtypes.length === 1 ? doc.subtypes[0] : ""
 	)
-	const fileInputRef = useRef<HTMLInputElement>(null)
+
+	const inputId = `file-input-${doc.name}`
 
 	const fileName = value instanceof File
 		? value.name
@@ -84,16 +85,13 @@ function DocumentRow({
 				<div className="flex items-center gap-1">
 					{hasFile ? (
 						<>
-							<Button
-								type="button"
-								size="sm"
-								variant="secondary"
-								className="h-8 text-xs gap-1.5 max-w-[160px]"
-								onClick={() => fileInputRef.current?.click()}
+							<label
+								htmlFor={inputId}
+								className="inline-flex items-center justify-center gap-1.5 h-8 px-3 text-xs rounded-md border bg-secondary text-secondary-foreground hover:bg-secondary/80 cursor-pointer max-w-[160px]"
 							>
 								<Paperclip className="size-3.5 shrink-0" />
 								<span className="truncate">{fileName}</span>
-							</Button>
+							</label>
 							<Button
 								type="button"
 								size="icon"
@@ -105,18 +103,16 @@ function DocumentRow({
 							</Button>
 						</>
 					) : (
-						<Button
-							type="button"
-							size="sm"
-							className="h-8 text-xs gap-1.5 bg-blue-500 hover:bg-blue-600 text-white"
-							onClick={() => fileInputRef.current?.click()}
+						<label
+							htmlFor={inputId}
+							className="inline-flex items-center justify-center gap-1.5 h-8 px-3 text-xs rounded-md bg-blue-500 hover:bg-blue-600 text-white cursor-pointer"
 						>
 							<Paperclip className="size-3.5" />
 							Anexar arquivo
-						</Button>
+						</label>
 					)}
 					<input
-						ref={fileInputRef}
+						id={inputId}
 						type="file"
 						accept=".jpg,.jpeg,.png,.pdf"
 						className="hidden"
