@@ -168,7 +168,7 @@ export const simulationStep4Schema = z.object({
 // ─────────────────────────────────────────────
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
-const ACCEPTED_FILE_TYPES = ["application/pdf"]
+const ACCEPTED_FILE_TYPES = ["application/pdf", "image/jpeg", "image/jpg", "image/png"]
 
 const fileSchema = z
 	.custom<FileList>(
@@ -182,7 +182,7 @@ const fileSchema = z
 	)
 	.refine(
 		(files) => Array.from(files).every((file) => ACCEPTED_FILE_TYPES.includes(file.type)),
-		"Apenas arquivos .pdf são permitidos."
+		"Apenas arquivos .jpg, .png ou .pdf são permitidos."
 	)
 
 const optionalFileSchema = z
@@ -197,7 +197,7 @@ const optionalFileSchema = z
 			!files ||
 			files.length === 0 ||
 			Array.from(files).every((file) => ACCEPTED_FILE_TYPES.includes(file.type)),
-		"Apenas arquivos .pdf são permitidos."
+		"Apenas arquivos .jpg, .png ou .pdf são permitidos."
 	)
 
 export const simulationStep5Schema = z.object({
@@ -217,18 +217,24 @@ export const simulationStep5Schema = z.object({
 })
 
 export const editSimulationStep5Schema = z.object({
-	rgCnhSocios: optionalFileSchema,
+	// Campos novos (PF + PJ)
+	docIdentificacao: optionalFileSchema,
 	comprovantePropriedade: optionalFileSchema,
 	contaDeEnergia: optionalFileSchema,
+	orcamento: optionalFileSchema,
+	comprovanteVinculo: optionalFileSchema,
+	outrosDocumentos: optionalFileSchema,
+	// Campos legados (PJ)
+	rgCnhSocios: optionalFileSchema,
 	balancoDRE2022: optionalFileSchema,
 	balancoDRE2023: optionalFileSchema,
 	balancoDRE2024: optionalFileSchema,
+	balancoDRE2025: optionalFileSchema,
 	relacaoFaturamento: optionalFileSchema,
 	comprovanteEndereco: optionalFileSchema,
 	irpfSocios: optionalFileSchema,
 	fotosOperacao: optionalFileSchema,
 	proposta: optionalFileSchema,
-	balancoDRE2025: optionalFileSchema,
 	contratoSocial: optionalFileSchema
 })
 
