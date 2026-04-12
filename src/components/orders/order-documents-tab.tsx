@@ -61,6 +61,7 @@ function DocumentRow({
 	isAdmin: boolean
 	onRefresh: () => void
 }) {
+	const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ""
 	const [selectedSubtype, setSelectedSubtype] = useState<string>(doc.doc_subtype || (doc.subtypes.length === 1 ? doc.subtypes[0] : ""))
 	const [uploading, setUploading] = useState(false)
 	const [deleting, setDeleting] = useState(false)
@@ -96,7 +97,7 @@ function DocumentRow({
 			formData.append("file", file)
 			if (selectedSubtype) formData.append("docSubtype", selectedSubtype)
 
-			const response = await fetch("/meo/api/v1/documents/upload", {
+			const response = await fetch("${basePath}/api/v1/documents/upload", {
 				method: "POST",
 				body: formData,
 			})
@@ -119,7 +120,7 @@ function DocumentRow({
 
 	const handleView = useCallback(async () => {
 		try {
-			const response = await fetch(`/meo/api/v1/documents/view?orderId=${orderId}&fieldName=${doc.field_name}`)
+			const response = await fetch(`${basePath}/api/v1/documents/view?orderId=${orderId}&fieldName=${doc.field_name}`)
 			const result = await response.json()
 			if (result.success && result.url) {
 				window.open(result.url, "_blank")
@@ -134,7 +135,7 @@ function DocumentRow({
 	const handleDelete = useCallback(async () => {
 		setDeleting(true)
 		try {
-			const response = await fetch("/meo/api/v1/documents/delete", {
+			const response = await fetch("${basePath}/api/v1/documents/delete", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ orderId, fieldName: doc.field_name }),
