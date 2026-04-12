@@ -97,7 +97,7 @@ function DocumentRow({
 			formData.append("file", file)
 			if (selectedSubtype) formData.append("docSubtype", selectedSubtype)
 
-			const response = await fetch("${basePath}/api/v1/documents/upload", {
+			const response = await fetch(`${basePath}/api/v1/documents/upload`, {
 				method: "POST",
 				body: formData,
 			})
@@ -135,7 +135,7 @@ function DocumentRow({
 	const handleDelete = useCallback(async () => {
 		setDeleting(true)
 		try {
-			const response = await fetch("${basePath}/api/v1/documents/delete", {
+			const response = await fetch(`${basePath}/api/v1/documents/delete`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ orderId, fieldName: doc.field_name }),
