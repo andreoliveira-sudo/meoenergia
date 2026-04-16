@@ -56,20 +56,35 @@ export async function POST(request: NextRequest) {
 			)
 		}
 
-		// Update order_documents record if it exists
-		const updateData: Record<string, unknown> = {
+		// UPSERT order_documents record (cria se nao existir, atualiza se existir)
+		// Buscar label e required dos campos padrao
+		const { documentFieldsPF, documentFieldsPJ } = await import("@/lib/constants")
+		// Descobrir tipo do cliente a partir do pedido
+		const { data: orderInfo } = await (supabase as any)
+			.from("orders")
+			.select("customers(type)")
+			.eq("id", orderId)
+			.single()
+		const customerType = orderInfo?.customers?.type || "pf"
+		const fieldDefs = customerType === "pj" ? documentFieldsPJ : documentFieldsPF
+		const fieldDef = fieldDefs.find((f: { name: string; label: string; required: boolean }) => f.name === fieldName)
+
+		const upsertData: Record<string, unknown> = {
+			order_id: orderId,
+			field_name: fieldName,
+			label: fieldDef?.label || fieldName,
+			required: fieldDef?.required ?? true,
 			status: "uploaded",
 			uploaded_at: new Date().toISOString(),
 			updated_at: new Date().toISOString(),
+			rejection_reason: null, // reset ao reenviar
 		}
 		if (docSubtype) {
-			updateData.doc_subtype = docSubtype
+			upsertData.doc_subtype = docSubtype
 		}
 
 		await (supabase as any).from("order_documents")
-			.update(updateData)
-			.eq("order_id", orderId)
-			.eq("field_name", fieldName)
+			.upsert(upsertData, { onConflict: "order_id,field_name" })
 
 		// Verificar se todos os obrigatorios foram enviados → transicao automatica
 		const { data: allDocs } = await (supabase as any)
