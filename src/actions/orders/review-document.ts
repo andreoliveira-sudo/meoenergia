@@ -38,25 +38,33 @@ async function reviewDocument({
 			return { success: false, message: "Usuario nao autenticado." }
 		}
 
-		// 1. Atualiza o registro do documento
-		const updateData: Record<string, unknown> = {
+		// 1. UPSERT do registro do documento (cria se nao existir)
+		// Buscar metadata do campo
+		const { documentFieldsPF, documentFieldsPJ } = await import("@/lib/constants")
+		const { data: orderInfo } = await (supabase as any)
+			.from("orders")
+			.select("customers(type)")
+			.eq("id", orderId)
+			.single()
+		const customerType = orderInfo?.customers?.type || "pf"
+		const fieldDefs = customerType === "pj" ? documentFieldsPJ : documentFieldsPF
+		const fieldDef = fieldDefs.find((f: { name: string; label: string; required: boolean }) => f.name === fieldName)
+
+		const upsertData: Record<string, unknown> = {
+			order_id: orderId,
+			field_name: fieldName,
+			label: fieldDef?.label || fieldName,
+			required: fieldDef?.required ?? true,
 			status,
 			reviewed_by: currentUser.id,
 			reviewed_at: new Date().toISOString(),
 			updated_at: new Date().toISOString(),
-		}
-
-		if (status === "rejected") {
-			updateData.rejection_reason = rejectionReason || null
-		} else {
-			updateData.rejection_reason = null
+			rejection_reason: status === "rejected" ? (rejectionReason || null) : null,
 		}
 
 		const { error: updateError } = await (supabase as any)
 			.from("order_documents")
-			.update(updateData)
-			.eq("order_id", orderId)
-			.eq("field_name", fieldName)
+			.upsert(upsertData, { onConflict: "order_id,field_name" })
 
 		if (updateError) {
 			console.error("Erro ao atualizar documento:", updateError)
