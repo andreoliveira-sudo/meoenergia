@@ -71,60 +71,28 @@ async function getOrderDocuments(
 			}
 		}
 
-		// 3. If we have DB records, use them; otherwise build defaults from field definitions
+		// 3. Mapear dbDocs por field_name para lookup rapido
+		const dbDocsMap = new Map<string, OrderDocumentRow>()
 		if (dbDocs && dbDocs.length > 0) {
-			const result: OrderDocumentView[] = (dbDocs as OrderDocumentRow[]).map((doc) => {
-				// Determine subtypes from the field definitions
-				const type = customerType || "pf"
-				const fields: DocumentFieldDef[] = type === "pj" ? documentFieldsPJ : documentFieldsPF
-				const fieldDef = fields.find((f) => f.name === doc.field_name)
-
-				// Check if file exists - could be stored as field_name or field_name_subtype
-				let hasFile = uploadedFileNames.has(doc.field_name)
-				if (!hasFile && doc.doc_subtype) {
-					const subtypeKey = `${doc.field_name}_${doc.doc_subtype.replace(/\s+/g, "_")}`
-					hasFile = uploadedFileNames.has(subtypeKey)
-				}
-				// Also check any file that starts with the field_name
-				if (!hasFile) {
-					for (const fname of uploadedFileNames) {
-						if (fname.startsWith(doc.field_name)) {
-							hasFile = true
-							break
-						}
-					}
-				}
-
-				return {
-					id: doc.id,
-					field_name: doc.field_name,
-					label: doc.label,
-					required: doc.required,
-					doc_subtype: doc.doc_subtype,
-					status: doc.status,
-					rejection_reason: doc.rejection_reason,
-					hasFile,
-					subtypes: fieldDef?.subtypes || [],
-					deadline: doc.deadline,
-					reviewed_by: doc.reviewed_by,
-					reviewed_at: doc.reviewed_at,
-					uploaded_at: doc.uploaded_at,
-				}
-			})
-
-			return {
-				success: true,
-				message: "Documentos encontrados.",
-				data: result,
+			for (const doc of dbDocs as OrderDocumentRow[]) {
+				dbDocsMap.set(doc.field_name, doc)
 			}
 		}
 
-		// 4. No DB records - build defaults from field definitions
+		// 4. SEMPRE retornar TODOS os campos definidos (PF ou PJ),
+		//    mesclando com os registros da tabela quando existirem
 		const type = customerType || "pf"
 		const fields: DocumentFieldDef[] = type === "pj" ? documentFieldsPJ : documentFieldsPF
 
 		const result: OrderDocumentView[] = fields.map((field) => {
+			const dbDoc = dbDocsMap.get(field.name)
+
+			// Verificar se arquivo existe no storage
 			let hasFile = uploadedFileNames.has(field.name)
+			if (!hasFile && dbDoc?.doc_subtype) {
+				const subtypeKey = `${field.name}_${dbDoc.doc_subtype.replace(/\s+/g, "_")}`
+				hasFile = uploadedFileNames.has(subtypeKey)
+			}
 			if (!hasFile) {
 				for (const fname of uploadedFileNames) {
 					if (fname.startsWith(field.name)) {
@@ -134,13 +102,33 @@ async function getOrderDocuments(
 				}
 			}
 
+			if (dbDoc) {
+				// Usar dados do banco
+				return {
+					id: dbDoc.id,
+					field_name: dbDoc.field_name,
+					label: dbDoc.label || field.label,
+					required: dbDoc.required ?? field.required,
+					doc_subtype: dbDoc.doc_subtype,
+					status: dbDoc.status,
+					rejection_reason: dbDoc.rejection_reason,
+					hasFile,
+					subtypes: field.subtypes || [],
+					deadline: dbDoc.deadline,
+					reviewed_by: dbDoc.reviewed_by,
+					reviewed_at: dbDoc.reviewed_at,
+					uploaded_at: dbDoc.uploaded_at,
+				}
+			}
+
+			// Sem registro no banco: usar defaults
 			return {
 				id: null,
 				field_name: field.name,
 				label: field.label,
 				required: field.required,
 				doc_subtype: null,
-				status: hasFile ? "uploaded" as const : "pending" as const,
+				status: hasFile ? ("uploaded" as const) : ("pending" as const),
 				rejection_reason: null,
 				hasFile,
 				subtypes: field.subtypes || [],
@@ -153,7 +141,7 @@ async function getOrderDocuments(
 
 		return {
 			success: true,
-			message: "Documentos gerados a partir dos campos padrao.",
+			message: "Documentos carregados.",
 			data: result,
 		}
 	} catch (e) {
