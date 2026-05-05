@@ -151,7 +151,7 @@ async function fetchPendingOrders(
   const { data: orders, error } = await supabase
     .from("orders")
     .select(
-      "kdi, status, created_at, system_power, equipment_value, labor_value, monthly_bill_value, customers(name, cpf, cnpj)"
+      "kdi, status, created_at, system_power, equipment_value, labor_value, monthly_bill_value, customers(name, cpf, cnpj, type)"
     )
     .eq("status", statusFilter)
     .is("deleted_at", null)
@@ -162,19 +162,28 @@ async function fetchPendingOrders(
   if (error) throw error;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (orders || []).map((o: any) => {
+  return (orders || [])
+    // Filtrar apenas Pessoa Fisica (RevoCred so simula PF)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const customer = o.customers as any;
-    return {
-      kdi: o.kdi,
-      customerName: customer?.name || "—",
-      cpfCnpj: customer?.cpf || customer?.cnpj || "—",
-      systemPower: o.system_power,
-      equipmentValue: o.equipment_value,
-      laborValue: o.labor_value,
-      monthlyBillValue: o.monthly_bill_value,
-    };
-  });
+    .filter((o: any) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const customer = o.customers as any;
+      return customer?.type === "pf" || (!!customer?.cpf && !customer?.cnpj);
+    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .map((o: any) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const customer = o.customers as any;
+      return {
+        kdi: o.kdi,
+        customerName: customer?.name || "—",
+        cpfCnpj: customer?.cpf || customer?.cnpj || "—",
+        systemPower: o.system_power,
+        equipmentValue: o.equipment_value,
+        laborValue: o.labor_value,
+        monthlyBillValue: o.monthly_bill_value,
+      };
+    });
 }
 
 /* ─── Run simulation via SSE endpoint (localhost server-to-server) ─── */
