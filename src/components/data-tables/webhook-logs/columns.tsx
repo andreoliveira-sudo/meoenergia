@@ -21,6 +21,7 @@ function formatTimestamp(dateString: string): string {
 function getEventLabel(eventType: string): string {
 	const map: Record<string, string> = {
 		"order.status.analysis_pending": "Ag. Analise",
+		"order.status.pre_approved": "Pre-aprovado",
 		"order.status.analysis_approved": "Aprovado",
 		"order.status.analysis_rejected": "Reprovado",
 		"order.status.documents_pending": "Ag. Documentos",

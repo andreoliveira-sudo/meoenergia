@@ -100,7 +100,8 @@ Disparado quando os dados de um pedido são atualizados.
 ### Status Disponíveis
 | Status | Descrição | Próximos Status Possíveis |
 |--------|-----------|---------------------------|
-| \`analysis_pending\` | **Ag. Análise** - Pedido criado, aguardando análise inicial | \`analysis_approved\`, \`analysis_rejected\`, \`documents_pending\` |
+| \`analysis_pending\` | **Ag. Análise** - Pedido criado, aguardando análise inicial | \`pre_approved\`, \`analysis_approved\`, \`analysis_rejected\`, \`documents_pending\` |
+| \`pre_approved\` | **Pré-aprovado** - Crédito pré-aprovado, aguardando aprovação final | \`analysis_approved\`, \`analysis_rejected\` |
 | \`analysis_approved\` | **Aprovado** - Pedido aprovado na análise inicial | \`sending_distributor_invoice\`, \`payment_distributor\` |
 | \`analysis_rejected\` | **Reprovado** - Pedido reprovado na análise | Terminal |
 | \`documents_pending\` | **Ag. Documentos** - Cliente precisa enviar documentação | \`docs_analysis\`, \`canceled\` |
@@ -117,6 +118,7 @@ Disparado quando os dados de um pedido são atualizados.
 Cada mudança para um destes status dispara o evento \`order.status.{status}\`:
 
 - \`order.status.analysis_pending\`
+- \`order.status.pre_approved\`
 - \`order.status.analysis_approved\`
 - \`order.status.analysis_rejected\`
 - \`order.status.documents_pending\`
@@ -166,6 +168,7 @@ Cada mudança para um destes status dispara o evento \`order.status.{status}\`:
                         type: "string",
                         enum: [
                             "analysis_pending",
+                            "pre_approved",
                             "analysis_approved",
                             "analysis_rejected",
                             "documents_pending",
@@ -181,6 +184,7 @@ Cada mudança para um destes status dispara o evento \`order.status.{status}\`:
                         description: "Status atual do pedido",
                         "x-enum-descriptions": {
                             "analysis_pending": "Ag. Análise - Pedido criado, aguardando análise inicial",
+                            "pre_approved": "Pré-aprovado - Crédito pré-aprovado, aguardando aprovação final",
                             "analysis_approved": "Aprovado - Pedido aprovado na análise inicial",
                             "analysis_rejected": "Reprovado - Pedido reprovado na análise",
                             "documents_pending": "Ag. Documentos - Cliente precisa enviar documentação",
@@ -199,6 +203,7 @@ Cada mudança para um destes status dispara o evento \`order.status.{status}\`:
                         enum: [
                             "order.updated",
                             "order.status.analysis_pending",
+                            "order.status.pre_approved",
                             "order.status.analysis_approved",
                             "order.status.analysis_rejected",
                             "order.status.documents_pending",

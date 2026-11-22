@@ -26,6 +26,7 @@ import type { OrderStatus, OrderWorkflowStatus, OrderWithRelations } from "@/lib
 
 const creditStatuses: { value: OrderStatus; label: string }[] = [
 	{ value: "analysis_pending", label: "Ag. Análise" },
+	{ value: "pre_approved", label: "Pré-aprovado" },
 	{ value: "analysis_approved", label: "Aprovado" },
 	{ value: "analysis_rejected", label: "Reprovado" },
 ]

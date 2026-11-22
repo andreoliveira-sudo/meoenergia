@@ -21,6 +21,7 @@ const formatCurrency = (value: number | null | undefined): string => {
 
 const statusTranslations: Record<OrderStatus, string> = {
 	analysis_pending: "Ag. Análise",
+	pre_approved: "Pré-aprovado",
 	analysis_approved: "Aprovado",
 	analysis_rejected: "Reprovado",
 	documents_pending: "Ag. Documentos",
@@ -36,6 +37,7 @@ const statusTranslations: Record<OrderStatus, string> = {
 
 const statusVariant: Record<OrderStatus, "default" | "secondary" | "destructive" | "outline"> = {
 	analysis_pending: "secondary",
+	pre_approved: "outline",
 	analysis_approved: "outline",
 	analysis_rejected: "outline",
 	documents_pending: "secondary",
@@ -51,6 +53,7 @@ const statusVariant: Record<OrderStatus, "default" | "secondary" | "destructive"
 
 const statusColor: Record<OrderStatus, string> = {
 	analysis_pending: "bg-yellow-500/20 text-yellow-700 border-yellow-500/30",
+	pre_approved: "bg-cyan-500/20 text-cyan-700 border-cyan-500/30",
 	analysis_approved: "bg-blue-500/20 text-blue-700 border-blue-500/30",
 	analysis_rejected: "bg-red-500/20 text-red-700 border-red-500/30",
 	documents_pending: "bg-yellow-600/80 text-white",

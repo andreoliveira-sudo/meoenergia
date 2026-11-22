@@ -16,6 +16,7 @@ export const WebhookLogsTableToolbar = <TData,>({ table }: WebhookLogsTableToolb
 
 	const eventOptions = [
 		{ label: "Ag. Analise", value: "order.status.analysis_pending" },
+		{ label: "Pre-aprovado", value: "order.status.pre_approved" },
 		{ label: "Aprovado", value: "order.status.analysis_approved" },
 		{ label: "Reprovado", value: "order.status.analysis_rejected" },
 		{ label: "Ag. Documentos", value: "order.status.documents_pending" },

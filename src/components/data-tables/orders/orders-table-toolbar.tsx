@@ -16,6 +16,7 @@ const deadlineFilterOptions = [
 
 const creditStatusOptions = [
 	{ label: "Ag. Análise", value: "analysis_pending" },
+	{ label: "Pré-aprovado", value: "pre_approved" },
 	{ label: "Aprovado", value: "analysis_approved" },
 	{ label: "Reprovado", value: "analysis_rejected" },
 ]

@@ -1409,6 +1409,7 @@ export type Database = {
       customer_type: "pf" | "pj"
       enum_order_status:
       | "analysis_pending"
+      | "pre_approved"
       | "analysis_approved"
       | "analysis_rejected"
       | "documents_pending"
@@ -1576,6 +1577,7 @@ export const Constants = {
       customer_type: ["pf", "pj"],
       enum_order_status: [
         "analysis_pending",
+        "pre_approved",
         "analysis_approved",
         "analysis_rejected",
         "documents_pending",
