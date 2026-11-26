@@ -490,15 +490,18 @@ export default function RevocredModal() {
               try {
                 const parsed = JSON.parse(data.detail);
                 const isApproved = parsed.resultado === "APROVADO";
+                const isRejected = parsed.resultado === "REPROVADO";
                 let detail = "";
                 if (isApproved && parsed.parcelas?.length > 0) {
                   detail = parsed.parcelas
                     .map((p: { prazo: string; valor: string; taxa: string }) => `${p.prazo} de ${p.valor} (${p.taxa})`)
                     .join("\n");
-                } else if (!isApproved) {
+                } else if (isRejected) {
                   detail = parsed.motivo || "Crédito não aprovado";
+                } else {
+                  detail = `Falha na análise (${parsed.resultado}) - status do pedido NÃO alterado. ${parsed.motivo || ""}`.trim();
                 }
-                setResult({ step: isApproved ? "APROVADO" : "REPROVADO", status: "result", detail });
+                setResult({ step: isApproved ? "APROVADO" : isRejected ? "REPROVADO" : "FALHA", status: "result", detail });
               } catch {
                 setResult({ step: "Resultado", status: "result", detail: data.detail });
               }
@@ -592,13 +595,20 @@ export default function RevocredModal() {
         setResult({ step: "Erro", status: "error", detail: res.detail });
       }
 
-      // 1. Normalize resultado: anything NOT APROVADO → REPROVADO
-      const normalizedResultado = res.resultado === "APROVADO" ? "APROVADO" : "REPROVADO";
-      const statusUpdatedTo =
-        normalizedResultado === "APROVADO" ? "analysis_approved" : "analysis_rejected";
+      // 1. Só APROVADO ou REPROVADO de verdade mudam o status.
+      //    ERRO / INDEFINIDO / ERRO_VALIDACAO = falha do robô: status mantido.
+      const isFinal = res.resultado === "APROVADO" || res.resultado === "REPROVADO";
+      const normalizedResultado = isFinal
+        ? res.resultado
+        : res.resultado === "ERRO" ? "ERRO" : "INDEFINIDO";
+      const statusUpdatedTo = !isFinal
+        ? null
+        : normalizedResultado === "APROVADO" ? "analysis_approved" : "analysis_rejected";
 
-      // 2. Update order status (same as batch)
-      await updateOrderStatus(trimmed, normalizedResultado);
+      // 2. Update order status (same as batch) - somente resultado final
+      if (isFinal) {
+        await updateOrderStatus(trimmed, normalizedResultado);
+      }
 
       // 3. Fetch order info for complete log
       let orderInfo: Record<string, unknown> = {};
@@ -618,7 +628,7 @@ export default function RevocredModal() {
         resultado_detail: res.detail || (res.resultado !== "APROVADO" ? `Original: ${res.resultado}` : ""),
         parcelas: res.parcelas || null,
         steps_log: res.stepsLog || null,
-        error_message: (res.resultado === "ERRO" || res.resultado === "INDEFINIDO") ? (res.detail || res.resultado) : null,
+        error_message: !isFinal ? `${res.resultado}: ${res.detail || "sem detalhe"}`.slice(0, 2000) : null,
         duration_ms: Date.now() - startTime,
         status_updated_to: statusUpdatedTo,
         system_power: orderInfo.systemPower || null,
@@ -738,7 +748,7 @@ export default function RevocredModal() {
   const visibleSteps = steps.filter((s) => s.step !== "read_result" && s.step !== "complete");
 
   const batchApproved = batchResults.filter((r) => r.resultado === "APROVADO").length;
-  const batchRejected = batchResults.filter((r) => r.resultado !== "APROVADO").length;
+  const batchRejected = batchResults.filter((r) => r.resultado === "REPROVADO").length;
 
   return (
     <div

@@ -4,6 +4,24 @@ import puppeteer from "puppeteer-core";
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
+ * A RevoCred às vezes demora 30-45s para entregar a página a partir da VM101
+ * (intermitente). Espera só o carregamento da página ("load", não "rede parada"),
+ * com 60s de limite e uma nova tentativa antes de desistir.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function gotoComRetry(page: any, url: string): Promise<void> {
+  for (let tentativa = 1; tentativa <= 2; tentativa++) {
+    try {
+      await page.goto(url, { waitUntil: "load", timeout: 60000 });
+      return;
+    } catch (err) {
+      if (tentativa === 2) throw err;
+      await wait(3000);
+    }
+  }
+}
+
+/**
  * Resolve the Chrome/Chromium executable path for puppeteer-core.
  * Checks CHROME_PATH env var first, then common Windows/Linux locations.
  */
@@ -158,9 +176,7 @@ export async function GET(request: Request) {
         // ─── c) Login to RevoCred ───
         sendEvent("login", "running", "Fazendo login na RevoCred...");
 
-        await page.goto("https://app.revocred.com.br/login", {
-          waitUntil: "networkidle2",
-        });
+        await gotoComRetry(page, "https://app.revocred.com.br/login");
         await wait(stepDelay * 1000);
 
         // Fill email — try multiple selectors
@@ -204,7 +220,7 @@ export async function GET(request: Request) {
         // Wait for redirect after login (could be /propostas or /dashboard or other)
         await page.waitForFunction(
           () => !window.location.pathname.includes("/login"),
-          { timeout: 15000 }
+          { timeout: 60000 }
         );
         await wait(stepDelay * 1500);
 
@@ -213,9 +229,7 @@ export async function GET(request: Request) {
         // ─── d) Navigate to simulation page ───
         sendEvent("navigate", "running", "Navegando para simulacao...");
 
-        await page.goto("https://app.revocred.com.br/simulacao", {
-          waitUntil: "networkidle2",
-        });
+        await gotoComRetry(page, "https://app.revocred.com.br/simulacao");
         await wait(stepDelay * 1500);
 
         sendEvent("navigate", "done", "Pagina de simulacao carregada");

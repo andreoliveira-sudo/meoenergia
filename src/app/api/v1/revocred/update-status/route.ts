@@ -22,12 +22,20 @@ export async function POST(request: Request) {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   // Map resultado to order status
-  // APROVADO → approved; anything else (REPROVADO, INDEFINIDO, ERRO) → rejected
+  // APROVADO → approved; REPROVADO → rejected.
+  // Qualquer outro (ERRO, INDEFINIDO, ERRO_VALIDACAO...) é falha do robô:
+  // NÃO altera o status (o pedido continua em Ag. Análise).
   let newStatus: string;
   if (resultado === "APROVADO") {
     newStatus = "analysis_approved";
-  } else {
+  } else if (resultado === "REPROVADO") {
     newStatus = "analysis_rejected";
+  } else {
+    return Response.json({
+      updated: false,
+      kdi,
+      reason: `Resultado "${resultado}" não é final; status mantido`,
+    });
   }
 
   const { error } = await (supabase

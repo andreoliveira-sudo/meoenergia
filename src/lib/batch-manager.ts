@@ -23,7 +23,7 @@ import { fireWebhookByKdi } from "@/lib/webhook-sender";
 interface BatchResult {
   kdi: string;
   customerName: string;
-  resultado: "APROVADO" | "REPROVADO";
+  resultado: "APROVADO" | "REPROVADO" | "ERRO" | "INDEFINIDO";
   detail: string;
 }
 
@@ -352,6 +352,14 @@ async function saveLog(logData: Record<string, unknown>) {
 async function runBatchLoop() {
   const state = getState();
   const processedKdis = new Set<string>();
+  // Falha do robo: tenta de novo apos 30 min, ate 3 vezes nesta rodada do lote
+  const MAX_TENTATIVAS = 3;
+  const ESPERA_NOVA_TENTATIVA_MS = 30 * 60 * 1000;
+  const falhas = new Map<string, { count: number; ultima: number }>();
+  const podeTentar = (kdi: string) => {
+    const f = falhas.get(kdi);
+    return !f || (f.count < MAX_TENTATIVAS && Date.now() - f.ultima >= ESPERA_NOVA_TENTATIVA_MS);
+  };
   let orderIndex = 0;
 
   // Heartbeat every 10 seconds to signal liveness
@@ -387,7 +395,7 @@ async function runBatchLoop() {
 
         // 2. Filter out already processed in this batch run
         const remaining = freshOrders.filter(
-          (o) => !processedKdis.has(o.kdi)
+          (o) => !processedKdis.has(o.kdi) && podeTentar(o.kdi)
         );
         state.totalOrders = freshOrders.length;
 
@@ -440,16 +448,30 @@ async function runBatchLoop() {
         const res = await runSimulation(order.kdi, state.batchStepDelay);
         if (g.__batchAbort) break;
 
-        // 5. Normalize resultado: anything NOT APROVADO → REPROVADO
-        const normalizedResultado =
-          res.resultado === "APROVADO" ? "APROVADO" : "REPROVADO";
-        const statusUpdatedTo =
-          normalizedResultado === "APROVADO"
+        // 5. Resultado final SO para APROVADO ou REPROVADO de verdade.
+        //    ERRO / INDEFINIDO / ERRO_VALIDACAO = falha do robo: o pedido
+        //    continua em Ag. Analise (NAO vira Reprovado) e a falha fica no log.
+        const isFinal =
+          res.resultado === "APROVADO" || res.resultado === "REPROVADO";
+        const normalizedResultado: BatchResult["resultado"] = isFinal
+          ? (res.resultado as "APROVADO" | "REPROVADO")
+          : res.resultado === "ERRO"
+            ? "ERRO"
+            : "INDEFINIDO";
+        const statusUpdatedTo: string | null = !isFinal
+          ? null
+          : res.resultado === "APROVADO"
             ? "analysis_approved"
             : "analysis_rejected";
 
-        // 6. Update order status in database
-        await updateOrderStatus(order.kdi, normalizedResultado);
+        // 6. Update order status in database (somente resultado final)
+        if (isFinal) {
+          await updateOrderStatus(order.kdi, normalizedResultado);
+        } else {
+          console.warn(
+            `[BatchManager] KDI ${order.kdi}: falha do robo (${res.resultado}) - status mantido. ${res.detail || ""}`
+          );
+        }
 
         // 7. Save detailed log
         await saveLog({
@@ -468,10 +490,9 @@ async function runBatchLoop() {
                 : res.detail),
           parcelas: res.parcelas || null,
           steps_log: res.stepsLog || null,
-          error_message:
-            res.resultado === "ERRO" || res.resultado === "INDEFINIDO"
-              ? res.detail || res.resultado
-              : null,
+          error_message: !isFinal
+            ? `${res.resultado}: ${res.detail || "sem detalhe"}`.slice(0, 2000)
+            : null,
           duration_ms: Date.now() - simStartTime,
           batch_date: state.batchDate,
           batch_status_filter: state.batchStatusFilter,
@@ -482,16 +503,18 @@ async function runBatchLoop() {
           monthly_bill_value: order.monthlyBillValue,
         });
 
-        // 8. Fire webhook (fire-and-forget, não trava o batch)
-        fireWebhookByKdi(order.kdi, statusUpdatedTo).catch((err) =>
-          console.error(`[BatchManager] Erro webhook KDI ${order.kdi}:`, err)
-        );
+        // 8. Fire webhook (fire-and-forget, não trava o batch) - só se o status mudou
+        if (statusUpdatedTo) {
+          fireWebhookByKdi(order.kdi, statusUpdatedTo).catch((err) =>
+            console.error(`[BatchManager] Erro webhook KDI ${order.kdi}:`, err)
+          );
+        }
 
         // 9. Record result
         const resultEntry: BatchResult = {
           kdi: order.kdi,
           customerName: order.customerName,
-          resultado: normalizedResultado as "APROVADO" | "REPROVADO",
+          resultado: normalizedResultado,
           detail:
             res.detail ||
             (res.resultado !== "APROVADO"
@@ -503,7 +526,12 @@ async function runBatchLoop() {
           ...state.results.filter((r) => r.kdi !== order.kdi),
           resultEntry,
         ];
-        processedKdis.add(order.kdi);
+        if (isFinal) {
+          processedKdis.add(order.kdi);
+        } else {
+          const f = falhas.get(order.kdi) || { count: 0, ultima: 0 };
+          falhas.set(order.kdi, { count: f.count + 1, ultima: Date.now() });
+        }
         orderIndex++;
         state.processedCount = orderIndex;
 
