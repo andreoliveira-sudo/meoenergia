@@ -129,19 +129,20 @@ export async function GET(request: Request) {
         const rawLaborValue = order.labor_value as number;
         const orderKdi = order.kdi as string;
 
-        // RevoCred exige mão de obra entre 30% e 50% do valor dos produtos
-        // A validação é ESTRITA (< 50%, > 30%), valor exato na borda é rejeitado
-        // Usamos 49% como teto e 31% como piso para ficar seguro
-        const maxLabor = equipmentValue * 0.49;
-        const minLabor = equipmentValue * 0.31;
+        // RevoCred exige mão de obra entre 30% e 50% do TOTAL do projeto
+        // (produtos + mão de obra) - é o que a própria tela dela informa.
+        // Pedido dentro da faixa: simula EXATAMENTE o valor do pedido.
+        // Fora da faixa: ajusta para 31% ou 49% do total (L = E * p / (1 - p)).
+        // 30% exato é aceito; 50% exato é recusado (validação estrita no teto).
+        const totalPedido = equipmentValue + rawLaborValue;
+        const pctLabor = totalPedido > 0 ? rawLaborValue / totalPedido : 0;
         let laborValue = rawLaborValue;
-        if (rawLaborValue > maxLabor) {
-          // Cap em 45% (meio seguro entre 30-50%)
-          laborValue = Math.round(equipmentValue * 0.45 * 100) / 100;
-          sendEvent("fill_form", "running", `Mao de obra ajustada de ${formatBRL(rawLaborValue)} para ${formatBRL(laborValue)} (cap 45% RevoCred)`);
-        } else if (rawLaborValue < minLabor && rawLaborValue > 0) {
-          laborValue = Math.round(equipmentValue * 0.31 * 100) / 100;
-          sendEvent("fill_form", "running", `Mao de obra ajustada de ${formatBRL(rawLaborValue)} para ${formatBRL(laborValue)} (min 31% RevoCred)`);
+        if (rawLaborValue > 0 && pctLabor >= 0.5) {
+          laborValue = Math.round(((equipmentValue * 0.49) / 0.51) * 100) / 100;
+          sendEvent("fill_form", "running", `Mao de obra ajustada de ${formatBRL(rawLaborValue)} para ${formatBRL(laborValue)} (estava ${(pctLabor * 100).toFixed(1)}% do total; teto 49% do total RevoCred)`);
+        } else if (rawLaborValue > 0 && pctLabor < 0.2999) {
+          laborValue = Math.round(((equipmentValue * 0.31) / 0.69) * 100) / 100;
+          sendEvent("fill_form", "running", `Mao de obra ajustada de ${formatBRL(rawLaborValue)} para ${formatBRL(laborValue)} (estava ${(pctLabor * 100).toFixed(1)}% do total; piso 31% do total RevoCred)`);
         }
 
         sendEvent(
